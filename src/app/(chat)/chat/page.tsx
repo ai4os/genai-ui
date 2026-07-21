@@ -1,7 +1,11 @@
+import { StartChatForm } from "@/components/chat/start-chat-form";
+import { chatsContent } from "@/content/chats";
+
 export default function ChatIndexPage() {
   return (
-    <div className="flex h-full items-center justify-center text-muted-foreground">
-      <p>Select a chat from your chat history or create a new one to get started.</p>
+    <div className="flex h-full flex-col items-center justify-center gap-4 p-4">
+      <p className="text-muted-foreground">{chatsContent.chat.newDescription}</p>
+      <StartChatForm />
     </div>
   );
 }

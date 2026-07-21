@@ -1,66 +1,133 @@
-import Image from "next/image";
+import { auth, signIn } from "@/auth";
+import { redirect } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { landingContent } from "@/content/landing";
 
-// TODO: change default create-next-app to landing page
-export default function Home() {
+export default async function LandingPage() {
+  const session = await auth();
+
+  if (session && !session.error) {
+    redirect("/chat");
+  }
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+    <main className="flex min-h-screen">
+      {/* Left side panel */}
+      <div className="relative hidden flex-1 flex-col justify-between overflow-hidden bg-gradient-to-br from-brand-start via-brand-mid to-brand-end px-14 py-14 text-white lg:flex">
+        <svg
+          className="pointer-events-none absolute inset-0 h-full w-full"
+          viewBox="0 0 600 800"
+          preserveAspectRatio="xMidYMid slice"
+          aria-hidden="true"
+        >
+          <defs>
+            <radialGradient id="ringGlow" cx="50%" cy="50%" r="50%">
+              <stop
+                offset="0%"
+                stopColor="var(--brand-end)"
+                stopOpacity="0.35"
+              />
+              <stop
+                offset="100%"
+                stopColor="var(--brand-end)"
+                stopOpacity="0"
+              />
+            </radialGradient>
+          </defs>
+
+          {/* glow behind the circles */}
+          <circle cx="600" cy="130" r="380" fill="url(#ringGlow)">
+            <animateTransform
+              attributeName="transform"
+              type="translate"
+              values="0,0; -24,18; 0,0"
+              dur="18s"
+              repeatCount="indefinite"
+            />
+          </circle>
+
+          <g fill="none" stroke="#FFFFFF">
+            {/* circle--lg */}
+            <circle cx="600" cy="130" r="330" strokeWidth="1" opacity="0.16">
+              <animateTransform
+                attributeName="transform"
+                type="translate"
+                values="0,0; -18,24; 0,0"
+                dur="16s"
+                repeatCount="indefinite"
+              />
+            </circle>
+            {/* circle--md */}
+            <circle cx="600" cy="130" r="235" strokeWidth="1" opacity="0.26">
+              <animateTransform
+                attributeName="transform"
+                type="translate"
+                values="0,0; 16,-18; 0,0"
+                dur="13s"
+                repeatCount="indefinite"
+              />
+            </circle>
+            {/* circle--sm */}
+            <circle cx="600" cy="130" r="145" strokeWidth="1.2" opacity="0.4">
+              <animateTransform
+                attributeName="transform"
+                type="translate"
+                values="0,0; -10,-14; 0,0"
+                dur="10s"
+                repeatCount="indefinite"
+              />
+            </circle>
+          </g>
+        </svg>
+
+        <div className="relative z-10">
+          <h2 className="mb-4 max-w-md text-hero font-semibold leading-tight">
+            {landingContent.hero.title}
+          </h2>
+          <p className="max-w-md text-body leading-relaxed opacity-90">
+            {landingContent.hero.description}
           </p>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+
+        <div className="relative z-10 flex flex-col gap-3.5 border-t border-white/25 pt-5">
+          <p className="max-w-lg text-caption leading-relaxed opacity-85">
+            {landingContent.footer.disclaimer}{" "}
+            {landingContent.footer.partners.map((partner, i) => (
+              <span key={partner.href}>
+                <a href={partner.href} className="underline" target="_blank">
+                  {partner.label}
+                </a>
+                {i < landingContent.footer.partners.length - 1 ? " and " : " "}
+              </span>
+            ))}
+          </p>
+          <div className="flex flex-wrap items-center gap-5">
+            {/* TODO: replace chips with logos <img src="/logos/csic.svg" .../> */}
+            {landingContent.footer.badges.map((badge) => (
+              <span
+                key={badge}
+                className="flex h-[30px] items-center rounded-lg bg-white/10 px-3.5 text-s font-medium"
+              >
+                {badge}
+              </span>
+            ))}
+          </div>
         </div>
-      </main>
-    </div>
+      </div>
+
+      {/* Right side panel */}
+      <div className="flex w-full items-center justify-center bg-brand-surface px-8 py-16 lg:w-[45%]">
+        <form
+          action={async () => {
+            "use server";
+            await signIn("keycloak", { redirectTo: "/chat" });
+          }}
+        >
+          <Button type="submit" variant="brandPrimary" size="pill" className="w-full">
+            {landingContent.auth.loginButton}
+          </Button>
+        </form>
+      </div>
+    </main>
   );
 }
