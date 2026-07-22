@@ -1,19 +1,22 @@
 import { startChatAction } from "@/lib/actions/chats";
-import { AVAILABLE_MODELS } from "@/lib/models";
+import { getModels } from "@/lib/api/models";
 import { Button } from "@/components/ui/button";
+
 import { chatsContent } from "@/content/chats";
 
-export function StartChatForm() {
+export async function StartChatForm() {
+  const models = await getModels();
+
   return (
     <form action={startChatAction} className="flex w-full max-w-lg flex-col gap-3">
       <select
         name="model"
-        defaultValue={AVAILABLE_MODELS[0].id}
+        defaultValue={models[0]?.id}
         className="h-9 rounded-md border bg-transparent px-2 text-sm"
       >
-        {AVAILABLE_MODELS.map((m) => (
+        {models.map((m) => (
           <option key={m.id} value={m.id}>
-            {m.label}
+            {m.id}
           </option>
         ))}
       </select>

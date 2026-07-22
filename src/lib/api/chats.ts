@@ -44,13 +44,22 @@ export function createChat(data: {
   });
 }
 
-export function addMessage(
+export async function postMessageStream(
   chatId: string,
   content: string,
-): Promise<MessageOut> {
-  return apiFetch<MessageOut>(`/chats/${chatId}/messages`, {
+): Promise<Response> {
+  const session = await auth();
+
+  if (!session?.accessToken) {
+    throw new ApiError(401, "There is no active session");
+  }
+
+  return fetch(`${process.env.API_URL}/chats/${chatId}/messages`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${session.accessToken}`,
+    },
     body: JSON.stringify({ content }),
   });
 }

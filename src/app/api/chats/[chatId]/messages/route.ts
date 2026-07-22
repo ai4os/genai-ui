@@ -1,6 +1,8 @@
-import { NextRequest, NextResponse } from "next/server";
-import { addMessage } from "@/lib/api/chats";
+import { NextRequest } from "next/server";
+import { postMessageStream } from "@/lib/api/chats";
 import { ApiError } from "@/lib/api/errors";
+
+export const dynamic = "force-dynamic";
 
 export async function POST(
   req: NextRequest,
@@ -9,13 +11,27 @@ export async function POST(
   const { chatId } = await params;
   const { content } = await req.json();
 
+  let upstream: Response;
   try {
-    const message = await addMessage(chatId, content);
-    return NextResponse.json(message);
-  } catch (e) {
-    if (e instanceof ApiError) {
-      return NextResponse.json({ error: e.message }, { status: e.status });
+    upstream = await postMessageStream(chatId, content);
+  } catch (err) {
+    if (err instanceof ApiError) {
+      return new Response(err.message, { status: err.status });
     }
-    return NextResponse.json({ error: "Unexpected error" }, { status: 500 });
+    throw err;
   }
+
+  if (!upstream.ok || !upstream.body) {
+    const detail = await upstream.text().catch(() => "Upstream error");
+    return new Response(detail, { status: upstream.status });
+  }
+
+  return new Response(upstream.body, {
+    status: 200,
+    headers: {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache, no-transform",
+      Connection: "keep-alive",
+    },
+  });
 }

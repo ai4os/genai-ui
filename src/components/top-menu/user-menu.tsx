@@ -1,4 +1,5 @@
 import { auth, signOut } from "@/auth";
+import { Button } from "../ui/button";
 
 export async function UserMenu() {
   const session = await auth();
@@ -14,12 +15,12 @@ export async function UserMenu() {
           await signOut();
         }}
       >
-        <button
+        <Button
           type="submit"
-          className="text-sm text-muted-foreground underline"
+          className="text-sm underline"
         >
           Log out
-        </button>
+        </Button>
       </form>
     </div>
   );

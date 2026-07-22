@@ -20,7 +20,7 @@ export default function ChatLayout({
         <ChatList />
       </Suspense>
       <SidebarInset>
-        <header className="flex h-12 items-center gap-2 px-4">
+        <header className="sticky top-0 z-10 flex items-center justify-between border-b bg-background/95 backdrop-blur px-4 py-2">
           <div className="flex items-center gap-2">
             <SidebarTrigger />
             <Separator orientation="vertical" className="h-4" />

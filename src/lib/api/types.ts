@@ -19,3 +19,11 @@ export type MessageOut = {
   content: string;
   created_at: string;
 };
+
+export type ModelInfo = {
+  id: string;
+};
+
+export type DeltaEvent = { content: string };
+export type DoneEvent = { message_id: string; created_at: string };
+export type ErrorEvent = { detail: string };
