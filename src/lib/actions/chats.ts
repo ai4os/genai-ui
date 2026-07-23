@@ -1,16 +1,11 @@
 "use server";
 
-import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { createChat, addMessage } from "@/lib/api/chats";
+import { createChat } from "@/lib/api/chats";
 import { chatsContent } from "@/content/chats";
+import type { ChatSummary } from "@/lib/api/types";
 
-function deriveTitle(content: string): string {
-  const trimmed = content.trim();
-  return trimmed.length > 60 ? `${trimmed.slice(0, 60)}…` : trimmed;
-}
-
-export async function startChatAction(formData: FormData) {
+export async function startChatAction(formData: FormData): Promise<ChatSummary> {
   const model = formData.get("model") as string;
   const content = (formData.get("content") as string)?.trim();
 
@@ -18,9 +13,10 @@ export async function startChatAction(formData: FormData) {
     throw new Error(chatsContent.errors.emptyMessage);
   }
 
-  const chat = await createChat({ model, title: deriveTitle(content) });
-  await addMessage(chat.id, content);
+  const trimmed = content.length > 60 ? `${content.slice(0, 60)}…` : content;
+  const chat = await createChat({ model, title: trimmed });
 
   revalidatePath("/chat");
-  redirect(`/chat/${chat.id}`);
+
+  return chat;
 }
