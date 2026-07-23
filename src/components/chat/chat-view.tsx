@@ -9,6 +9,7 @@ import type {
   DeltaEvent,
   DoneEvent,
   ErrorEvent,
+  ModelInfo,
 } from "@/lib/api/types";
 import { parseSSEStream } from "@/lib/sse";
 import ReactMarkdown from "react-markdown";
@@ -22,10 +23,12 @@ function tempId() {
 function MessageBubble({
   role,
   content,
+  model,
   isStreaming,
 }: {
   role: string;
   content: string;
+  model?: string | null;
   isStreaming?: boolean;
 }) {
   const isUser = role === "user";
@@ -61,6 +64,9 @@ function MessageBubble({
             ▍
           </span>
         )}
+        {!isUser && model && (
+          <span className="pl-9 text-xs text-muted-foreground">{model}</span>
+        )}
       </div>
     </div>
   );
@@ -69,12 +75,18 @@ function MessageBubble({
 export function ChatView({
   chatId,
   initialMessages,
+  models,
 }: {
   chatId: string;
   initialMessages: MessageOut[];
+  models: ModelInfo[];
 }) {
   const [messages, setMessages] = useState(initialMessages);
   const [input, setInput] = useState("");
+  const [selectedModel, setSelectedModel] = useState(
+    initialMessages.findLast((m) => m.role === "assistant")?.model ??
+      models[0]?.id,
+  );
   const [sending, setSending] = useState(false);
   const [streamingId, setStreamingId] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -89,7 +101,7 @@ export function ChatView({
   }, [messages]);
 
   const sendMessage = useCallback(
-    async (content: string) => {
+    async (content: string, model: string) => {
       setSending(true);
 
       const userMsgId = tempId();
@@ -99,8 +111,14 @@ export function ChatView({
 
       setMessages((prev) => [
         ...prev,
-        { id: userMsgId, role: "user", content, created_at: now },
-        { id: assistantMsgId, role: "assistant", content: "", created_at: now },
+        { id: userMsgId, role: "user", content, model: null, created_at: now },
+        {
+          id: assistantMsgId,
+          role: "assistant",
+          content: "",
+          model,
+          created_at: now,
+        },
       ]);
 
       const controller = new AbortController();
@@ -110,13 +128,15 @@ export function ChatView({
         const res = await fetch(`/api/chats/${chatId}/messages`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ content }),
+          body: JSON.stringify({ content, model }),
           signal: controller.signal,
         });
 
         if (!res.ok || !res.body) {
           throw new Error(
-            await res.text().catch(() => "An error occurred while processing the response"),
+            await res
+              .text()
+              .catch(() => "An error occurred while processing the response"),
           );
         }
 
@@ -168,18 +188,15 @@ export function ChatView({
   useEffect(() => {
     if (hasCheckedPending.current) return;
     hasCheckedPending.current = true;
-
     const pending = consumePendingMessage(chatId);
-    if (pending) {
-      sendMessage(pending);
-    }
+    if (pending) sendMessage(pending, selectedModel);
   }, [chatId]);
 
   async function handleSend() {
     const content = input.trim();
     if (!content || sending) return;
     setInput("");
-    await sendMessage(content);
+    await sendMessage(content, selectedModel);
   }
 
   function handleStop() {
@@ -197,6 +214,7 @@ export function ChatView({
             key={m.id}
             role={m.role}
             content={m.content}
+            model={m.model}
             isStreaming={m.id === streamingId}
           />
         ))}
@@ -204,31 +222,45 @@ export function ChatView({
 
       <div className="border-t bg-background px-4 py-3 md:px-8">
         <div className="mx-auto flex max-w-3xl items-center gap-2 rounded-full border bg-background px-2 py-1.5 shadow-2">
-          <Input
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
+          <select
+            value={selectedModel}
+            onChange={(e) => setSelectedModel(e.target.value)}
             disabled={sending}
-            onKeyDown={(e) => e.key === "Enter" && handleSend()}
-            className="border-none shadow-none focus-visible:ring-0"
-          />
-          {sending ? (
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={handleStop}
-              className="rounded-full"
-            >
-              ■
-            </Button>
-          ) : (
-            <Button
-              size="icon"
-              onClick={handleSend}
-              className="rounded-full bg-primary-600 hover:bg-primary-700"
-            >
-              ↑
-            </Button>
-          )}
+            className="h-7 w-fit rounded-md border bg-transparent px-2 text-xs text-muted-foreground"
+          >
+            {models.map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.id}
+              </option>
+            ))}
+          </select>
+          <div className="flex items-center gap-2 rounded-full border bg-background px-2 py-1.5 shadow-2">
+            <Input
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              disabled={sending}
+              onKeyDown={(e) => e.key === "Enter" && handleSend()}
+              className="border-none shadow-none focus-visible:ring-0"
+            />
+            {sending ? (
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={handleStop}
+                className="rounded-full"
+              >
+                ■
+              </Button>
+            ) : (
+              <Button
+                size="icon"
+                onClick={handleSend}
+                className="rounded-full bg-primary-600 hover:bg-primary-700"
+              >
+                ↑
+              </Button>
+            )}
+          </div>
         </div>
       </div>
     </div>

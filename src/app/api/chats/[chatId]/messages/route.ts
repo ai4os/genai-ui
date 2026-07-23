@@ -9,11 +9,11 @@ export async function POST(
   { params }: { params: Promise<{ chatId: string }> },
 ) {
   const { chatId } = await params;
-  const { content } = await req.json();
+  const { content, model } = await req.json();
 
   let upstream: Response;
   try {
-    upstream = await postMessageStream(chatId, content);
+    upstream = await postMessageStream(chatId, content, model, req.signal);
   } catch (err) {
     if (err instanceof ApiError) {
       return new Response(err.message, { status: err.status });

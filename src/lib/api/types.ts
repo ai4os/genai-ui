@@ -15,9 +15,10 @@ export type MessageRole = "system" | "user" | "assistant" | "tool";
 
 export type MessageOut = {
   id: string;
-  role: MessageRole; 
+  role: MessageRole;
   content: string;
   created_at: string;
+  model: string | null;
 };
 
 export type ModelInfo = {
@@ -25,5 +26,5 @@ export type ModelInfo = {
 };
 
 export type DeltaEvent = { content: string };
-export type DoneEvent = { message_id: string; created_at: string };
+export type DoneEvent = { message_id: string; created_at: string; model: string };
 export type ErrorEvent = { detail: string };
