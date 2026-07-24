@@ -20,31 +20,60 @@ function tempId() {
   return `temp-${crypto.randomUUID()}`;
 }
 
+import Image from "next/image";
+import { getModelIcon, FallbackModelIcon } from "@/lib/model-icons";
+
+function formatTime(iso: string) {
+  return new Intl.DateTimeFormat("es-ES", {
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(iso));
+}
+
+function ModelAvatar({ model }: { model?: string | null }) {
+  const icon = getModelIcon(model);
+
+  if (icon) {
+    return (
+      <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full">
+        <Image src={icon.src} alt={icon.alt} width={28} height={28} />
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-primary-700">
+      <FallbackModelIcon className="size-4" />
+    </div>
+  );
+}
+
 function MessageBubble({
   role,
   content,
   model,
+  createdAt,
   isStreaming,
 }: {
   role: string;
   content: string;
   model?: string | null;
+  createdAt: string;
   isStreaming?: boolean;
 }) {
   const isUser = role === "user";
 
   return (
-    <div
-      className={cn("flex gap-2.5", isUser ? "justify-end" : "justify-start")}
-    >
+    <div className={cn("group flex", isUser ? "justify-end" : "flex-col justify-center")}>
       {!isUser && (
-        <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary-100 text-[11px] font-semibold text-primary-700">
-          AI
+        <div className="flex items-center">
+          <ModelAvatar model={model} />
+          <span className="pl-4 text-xs text-muted-foreground">{model}</span>
         </div>
       )}
       <div
         className={cn(
-          "max-w-[75%] rounded-md px-4 py-2.5 text-sm ",
+          "relative max-w-[100%] rounded-md px-4 py-2.5 text-sm",
           isUser
             ? "rounded-br-sm bg-primary-600 text-primary-foreground shadow-1"
             : "text-foreground",
@@ -60,13 +89,16 @@ function MessageBubble({
           <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
         </div>
         {isStreaming && (
-          <span className="ml-0.5 inline-block animate-pulse text-secondary-600">
-            ▍
-          </span>
+          <span className="ml-0.5 inline-block animate-pulse text-secondary-600">▍</span>
         )}
-        {!isUser && model && (
-          <span className="pl-9 text-xs text-muted-foreground">{model}</span>
-        )}
+        <span
+          className={cn(
+            "pointer-events-none absolute -bottom-5 whitespace-nowrap text-[11px] text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100",
+            isUser ? "right-0" : "left-0",
+          )}
+        >
+          {formatTime(createdAt)}
+        </span>
       </div>
     </div>
   );
@@ -215,8 +247,8 @@ export function ChatView({
             role={m.role}
             content={m.content}
             model={m.model}
-            isStreaming={m.id === streamingId}
-          />
+            createdAt={m.created_at}  
+            isStreaming={m.id === streamingId}         />
         ))}
       </div>
 
