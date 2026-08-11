@@ -6,15 +6,13 @@ import { chatsContent } from "@/content/chats";
 import type { ChatSummary } from "@/lib/api/types";
 
 export async function startChatAction(formData: FormData): Promise<ChatSummary> {
-  const model = formData.get("model") as string;
   const content = (formData.get("content") as string)?.trim();
-
   if (!content) {
     throw new Error(chatsContent.errors.emptyMessage);
   }
 
   const trimmed = content.length > 60 ? `${content.slice(0, 60)}…` : content;
-  const chat = await createChat({ model, title: trimmed });
+  const chat = await createChat({ title: trimmed });
 
   revalidatePath("/chat");
 

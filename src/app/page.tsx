@@ -102,15 +102,8 @@ export default async function LandingPage() {
             ))}
           </p>
           <div className="flex flex-wrap items-center gap-5">
-            {/* TODO: replace chips with logos <img src="/logos/csic.svg" .../> */}
-            {landingContent.footer.badges.map((badge) => (
-              <span
-                key={badge}
-                className="flex h-[30px] items-center rounded-lg bg-white/10 px-3.5 text-s font-medium"
-              >
-                {badge}
-              </span>
-            ))}
+            {/* TODO: review missing logos */}
+            <img src="/logos/eosc-arena.png" className="w-50" /> 
           </div>
         </div>
       </div>

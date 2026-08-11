@@ -10,7 +10,6 @@ export const landingContent = {
       { label: "AI4EOSC", href: "https://ai4eosc.eu/" },
       { label: "EOSC-ARENA", href: "https://arena.ai4eosc.eu/" },
     ],
-    badges: ["CSIC", "AI4EOSC", "EOSC-ARENA"],
   },
   auth: {
     loginButton: "Log in",

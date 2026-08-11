@@ -84,12 +84,20 @@
   --radius-md: var(--radius-md-size);
   --radius-lg: var(--radius-lg-size);
   --radius-xl: var(--radius-xl-size);
+  --radius-shell: var(--radius-shell-size);
 
   /* Shadows */
   --shadow-1: var(--shadow-1-value);
   --shadow-2: var(--shadow-2-value);
   --shadow-3: var(--shadow-3-value);
   --shadow-primary: var(--shadow-primary-value);
+  --shadow-shell: var(--shadow-shell-value);
+  --shadow-shell-soft: var(--shadow-shell-soft-value);
+
+  /* Error states */
+  --color-error: var(--error);
+  --color-error-surface: var(--error-surface);
+  --color-error-border: var(--error-border);
 }
 
 :root {
@@ -170,6 +178,7 @@
   --radius-md-size: 16px;
   --radius-lg-size: 24px;
   --radius-xl-size: 32px;
+  --radius-shell-size: 18px;
 
   /* Shadows */
   --shadow-1-value:
@@ -181,6 +190,13 @@
     0 4px 8px rgba(0, 0, 0, 0.05), 0 16px 40px rgba(0, 0, 0, 0.1),
     0 40px 80px rgba(0, 0, 0, 0.07);
   --shadow-primary-value: 0 8px 24px rgba(39, 64, 130, 0.25);
+  --shadow-shell-value: 0 12px 30px rgba(11, 43, 74, 0.18);
+  --shadow-shell-soft-value: 0 12px 30px rgba(11, 43, 74, 0.12);
+
+  /* Error states */
+  --error: #c0392b;
+  --error-surface: #fdf1f0;
+  --error-border: #f2c9c4;
 
   --transition-fast: 0.25s ease;
   --transition-base: 0.4s ease;
@@ -221,6 +237,10 @@
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: var(--primary-400);
+
+  --error: #e57468;
+  --error-surface: #3a2220;
+  --error-border: #5c2e29;
 }
 
 @layer base {
@@ -243,4 +263,14 @@
   .prose code:not(pre code) {
     @apply rounded-xs bg-primary-950/[0.06] px-1 py-0.5 text-[0.85em];
   }
+}
+
+.bg-app-shell {
+  background: linear-gradient(
+    120deg,
+    var(--brand-start) 0%,
+    var(--brand-mid) 34%,
+    var(--brand-surface) 60%,
+    var(--brand-surface) 100%
+  );
 }

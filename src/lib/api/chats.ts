@@ -1,7 +1,7 @@
 import "server-only";
 import { auth } from "@/auth";
 import { ApiError } from "./errors";
-import type { ChatSummary, ChatDetail } from "./types";
+import type { ChatSummary, ChatDetail, MessageTarget } from "./types";
 
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const session = await auth();
@@ -33,10 +33,7 @@ export function getChat(chatId: string): Promise<ChatDetail> {
   return apiFetch<ChatDetail>(`/chats/${chatId}`);
 }
 
-export function createChat(data: {
-  model: string;
-  title?: string;
-}): Promise<ChatSummary> {
+export function createChat(data: { title?: string }): Promise<ChatSummary> {
   return apiFetch<ChatSummary>("/chats", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -47,7 +44,7 @@ export function createChat(data: {
 export async function postMessageStream(
   chatId: string,
   content: string,
-  model: string,
+  target: MessageTarget,
   signal?: AbortSignal,
 ): Promise<Response> {
   const session = await auth();
@@ -62,7 +59,7 @@ export async function postMessageStream(
       "Content-Type": "application/json",
       Authorization: `Bearer ${session.accessToken}`,
     },
-    body: JSON.stringify({ content, model }),
+    body: JSON.stringify({ content, ...target }),
     signal,
   });
 }
