@@ -16,20 +16,21 @@ import { parseSSEStream } from "@/lib/sse";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { consumePendingMessage } from "@/lib/pending-message";
-
-function tempId() {
-  return `temp-${crypto.randomUUID()}`;
-}
-
 import Image from "next/image";
 import { getModelIcon, FallbackModelIcon } from "@/lib/model-icons";
 import { ModelAgentSelector, type Mode } from "./model-agent-selector";
-import { Bot } from "lucide-react";
+import { Bot, ChevronDown } from "lucide-react";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
 import { ChatContainer } from "./chat-container";
 import { apiContent } from "@/content/api";
 import { chatsContent } from "@/content/chats";
+import SyntaxHighlighter from "react-syntax-highlighter";
+import { atelierSeasideLight } from "react-syntax-highlighter/dist/esm/styles/hljs";
+
+function tempId() {
+  return `temp-${crypto.randomUUID()}`;
+}
 
 function formatTime(iso: string) {
   return new Intl.DateTimeFormat("es-ES", {
@@ -70,6 +71,43 @@ function TypingDots() {
   );
 }
 
+// Function that attempts to extract 'thinking’' and 'response' from a JSON string,
+// even if the JSON is incomplete (streaming)
+function parseAgentContent(rawContent: string) {
+  if (!rawContent || !rawContent.trimStart().startsWith("{")) {
+    return { displayThinking: null, displayContent: rawContent };
+  }
+
+  try {
+    const parsed = JSON.parse(rawContent);
+    if (parsed.thinking || parsed.response) {
+      return {
+        displayThinking: parsed.thinking,
+        displayContent: parsed.response || "",
+      };
+    }
+  } catch (e) {
+    const thinkingMatch = rawContent.match(
+      /"thinking"\s*:\s*"([^]*?)(?:",\s*"response"|$)/,
+    );
+    const responseMatch = rawContent.match(
+      /"response"\s*:\s*"([^]*?)(?:"}$|$)/,
+    );
+
+    if (thinkingMatch) {
+      const cleanStr = (str: string) =>
+        str.replace(/\\n/g, "\n").replace(/\\"/g, '"').replace(/\\\\/g, "\\");
+
+      return {
+        displayThinking: cleanStr(thinkingMatch[1]),
+        displayContent: responseMatch ? cleanStr(responseMatch[1]) : "",
+      };
+    }
+  }
+
+  return { displayThinking: null, displayContent: rawContent };
+}
+
 function MessageBubble({
   role,
   content,
@@ -87,7 +125,10 @@ function MessageBubble({
 }) {
   const isUser = role === "user";
   const isAgent = !!agentName;
-  const isTyping = isStreaming && content.length === 0;
+
+  const { displayThinking, displayContent } = parseAgentContent(content);
+
+  const isTyping = isStreaming && !displayContent && !displayThinking;
 
   return (
     <div
@@ -121,19 +162,83 @@ function MessageBubble({
         {isTyping ? (
           <TypingDots />
         ) : (
-          <>
-            <div
-              className={cn(
-                "prose prose-sm max-w-none",
-                "prose-p:my-1.5 prose-pre:my-2 prose-headings:my-2",
-                isUser ? "prose-invert" : "dark:prose-invert",
-              )}
-            >
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                {content}
-              </ReactMarkdown>
-            </div>
-          </>
+          <div className="flex flex-col gap-2">
+            {/* Thinking expansion panel */}
+            {displayThinking && (
+              <details className="group/details border-l-2 border-muted-foreground/30 pl-3 my-1">
+                <summary className="flex items-center gap-1.5 cursor-pointer text-xs font-medium text-muted-foreground hover:text-foreground transition-colors list-none [&::-webkit-details-marker]:hidden">
+                  {chatsContent.chat.thinking}
+                  <ChevronDown className="h-3.5 w-3.5 transition-transform duration-200 group-open/details:rotate-180" />
+                </summary>
+                <div className="mt-2 text-muted-foreground/80 prose prose-sm max-w-none prose-p:my-1 text-xs">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                    {displayThinking}
+                  </ReactMarkdown>
+                </div>
+              </details>
+            )}
+
+            {/* Response */}
+            {displayContent && (
+              <div
+                className={cn(
+                  "prose prose-sm max-w-none break-words",
+                  "prose-p:leading-relaxed prose-p:my-3",
+                  "prose-code:before:hidden prose-code:after:hidden",
+                  "prose-a:text-primary prose-a:underline-offset-2 hover:prose-a:text-primary/80",
+                  "prose-li:my-0.5",
+                  "prose-th:border prose-th:border-border prose-th:p-2 prose-th:bg-muted",
+                  "prose-td:border prose-td:border-border prose-td:p-2",
+                  isUser ? "prose-invert" : "dark:prose-invert",
+                )}
+              >
+                <ReactMarkdown 
+                  remarkPlugins={[remarkGfm]}
+                  components={{
+                    code({node, inline, className, children, ...props}: any) {
+                      const match = /language-(\w+)/.exec(className || '');
+                      
+                      // code block
+                      if (!inline && match) {
+                        return (
+                          <div className="relative mt-4 mb-4 rounded-md overflow-hidden border border-border">
+                            <div className="flex items-center justify-between px-4 py-1.5 bg-muted/50 text-xs text-muted-foreground border-b border-border">
+                              <span>{match[1]}</span>
+                            </div>
+                            <SyntaxHighlighter
+                              {...props}
+                              style={atelierSeasideLight}
+                              language={match[1]}
+                              PreTag="div"
+                              customStyle={{ margin: 0, padding: '1rem', background: 'transparent' }}
+                              className="text-[13px]"
+                            >
+                              {String(children).replace(/\n$/, '')}
+                            </SyntaxHighlighter>
+                          </div>
+                        );
+                      }
+                      
+                      // code line
+                      return (
+                        <code 
+                          {...props} 
+                          className={cn(
+                            "bg-muted/60 text-foreground px-1.5 py-0.5 rounded-md font-mono text-[0.85em] border border-border/50", 
+                            className
+                          )}
+                        >
+                          {children}
+                        </code>
+                      );
+                    }
+                  }}
+                >
+                  {displayContent}
+                </ReactMarkdown>
+              </div>
+            )}
+          </div>
         )}
         <span
           className={cn(
@@ -222,11 +327,22 @@ export function ChatView({
           DeltaEvent | DoneEvent | ErrorEvent
         >(res.body)) {
           if (event === "delta") {
-            const { content: chunk } = data as DeltaEvent;
+            // Extraemos content y thinking del nuevo DeltaEvent[cite: 2, 3]
+            const { content: chunk, thinking: thinkingChunk } =
+              data as DeltaEvent;
+
             setMessages((prev) =>
               prev.map((m) =>
                 m.id === assistantMsgId
-                  ? { ...m, content: m.content + chunk }
+                  ? {
+                      ...m,
+                      // Concatenamos el contenido si viene en el chunk, si no mantenemos lo actual
+                      content: chunk ? m.content + chunk : m.content,
+                      // Concatenamos el CoT si viene en el chunk
+                      thinking: thinkingChunk
+                        ? (m.thinking || "") + thinkingChunk
+                        : m.thinking,
+                    }
                   : m,
               ),
             );
@@ -392,6 +508,7 @@ export function ChatView({
             key={m.id}
             role={m.role}
             content={m.content}
+            thinking={m.thinking}
             model={m.model_id}
             agentName={m.agent_id ? agentsById.get(m.agent_id) : null}
             createdAt={m.created_at}

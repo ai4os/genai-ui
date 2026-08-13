@@ -97,7 +97,7 @@ export function ModelAgentSelector({
   const detailMeta = detailItem ? parseModel(detailItem.id) : null;
 
   return (
-    <div className="flex items-center justify-between w-full gap-3">
+    <div className="flex items-center justify-between w-full gap-3 pl-3">
       {/* Toggle model | agent */}
       <div className="flex items-center gap-1 rounded-full bg-muted p-1">
         <button

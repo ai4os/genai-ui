@@ -60,7 +60,7 @@ export function StartChatFormClient({
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center justify-between border-b px-4 py-3 md:px-8">
+      <div className="flex items-center justify-between border-b px-4 py-3 md:pr-8 md:pl-3">
         <div className="flex items-center gap-2">
           <SidebarTrigger />
           <Separator orientation="vertical" className="h-4" />

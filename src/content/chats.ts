@@ -6,7 +6,7 @@ export const chatsContent = {
     today: "Today",
     yesterday: "Yesterday",
     lastWeek: "Last 7 days",
-    previous: "Previous"
+    previous: "Previous",
   },
   chat: {
     send: "Send",
@@ -23,18 +23,20 @@ export const chatsContent = {
       "Suggest research questions",
     ],
     retry: "Retry",
-    blocked: "Messaging blocked"
+    blocked: "Messaging blocked",
+    thinking: "Thinking"
   },
-  selector:{
+  selector: {
     context: "Context",
     status: "Status",
     unknown: "Unknown",
     choose: "Choose an option",
-noDesc: "No description available"
+    noDesc: "No description available",
   },
   errors: {
     emptyMessage: "Message can't be empty",
-    fixConnection: "Ensure your connection is working properly before you continue writing",
-    createChat: "Error creating the chat"
+    fixConnection:
+      "Ensure your connection is working properly before you continue writing",
+    createChat: "Error creating the chat",
   },
 } as const;

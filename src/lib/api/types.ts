@@ -16,6 +16,7 @@ export type MessageOut = {
   id: string;
   role: MessageRole;
   content: string;
+  thinking?: string;
   created_at: string;
   model_id: string | null;
   agent_id: string | null;
@@ -45,7 +46,7 @@ export type MessageTarget =
   | { model_id: string; agent_id?: never }
   | { agent_id: string; model_id?: never };
 
-export type DeltaEvent = { content: string };
+export type DeltaEvent = { content: string; thinking?: string };
 export type DoneEvent = {
   message_id: string;
   created_at: string;
