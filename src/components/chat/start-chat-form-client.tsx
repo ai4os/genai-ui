@@ -79,8 +79,8 @@ export function StartChatFormClient({
       </div>
 
       <div className="flex flex-1 flex-col items-center justify-center gap-4 px-6 text-center">
-        <div className="flex size-30 items-center justify-center rounded-2xl ">
-            <img src="/logos/genai.svg" alt="" className="size-25 drop-shadow-xl" />
+        <div className="flex size-40 items-center justify-center rounded-2xl ">
+            <img src="/logos/genai.svg" alt="" className="size-35 drop-shadow-xl" />
         </div>
         <h2 className="text-lg font-semibold">
           {chatsContent.chat.emptyStateTitle}
