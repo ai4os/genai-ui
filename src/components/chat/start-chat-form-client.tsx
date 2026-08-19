@@ -1,8 +1,7 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Sparkles } from "lucide-react";
 import { startChatAction } from "@/lib/actions/chats";
 import { setPendingMessage } from "@/lib/pending-message";
 import { chatsContent } from "@/content/chats";
@@ -11,22 +10,43 @@ import { ModelAgentSelector, type Mode } from "./model-agent-selector";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
 import { ChatContainer } from "./chat-container";
+import { toast } from "sonner";
 
 export function StartChatFormClient({
   models,
   agents,
-}: {
+  initialModelId,
+  initialAgentId,
+}: Readonly<{
   models: ModelInfo[];
   agents: AgentInfo[];
-}) {
-  const [content, setContent] = useState("");
+  initialModelId?: string;
+  initialAgentId?: string;
+}>) {
+const [content, setContent] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
 
-  const [mode, setMode] = useState<Mode>("model");
-  const [model, setModel] = useState(models[0]?.id);
-  const [agent, setAgent] = useState(agents[0]?.id);
+  const requestedModel = initialModelId
+    ? models.find((m) => m.id === initialModelId && m.status !== "unhealthy")
+    : undefined;
+  const requestedAgent = initialAgentId
+    ? agents.find((a) => a.id === initialAgentId)
+    : undefined;
+
+  const [mode, setMode] = useState<Mode>(requestedAgent ? "agent" : "model");
+  const [model, setModel] = useState(requestedModel?.id ?? models[0]?.id);
+  const [agent, setAgent] = useState(requestedAgent?.id ?? agents[0]?.id);
+
+  useEffect(() => {
+    if (
+      (initialModelId && !requestedModel) ||
+      (initialAgentId && !requestedAgent)
+    ) {
+      toast.error(chatsContent.errors.requestedTargetUnavailable);
+    }
+  }, []);
 
   function submit(text: string) {
     const trimmed = text.trim();

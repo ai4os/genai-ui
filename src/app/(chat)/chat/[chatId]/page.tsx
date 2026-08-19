@@ -5,9 +5,9 @@ import { getAgents } from "@/lib/api/agents";
 
 export default async function ChatPage({
   params,
-}: {
+}: Readonly<{
   params: Promise<{ chatId: string }>;
-}) {
+}>) {
   const { chatId } = await params;
   const [chat, models, agents] = await Promise.all([
     getChat(chatId),

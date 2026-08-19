@@ -24,19 +24,29 @@ export const chatsContent = {
     ],
     retry: "Retry",
     blocked: "Messaging blocked",
-    thinking: "Thinking"
+    thinking: "Thinking",
   },
   selector: {
-    context: "Context",
+    maxInputTokens: "Max input tokens",
     status: "Status",
     unknown: "Unknown",
     choose: "Choose an option",
     noDesc: "No description available",
+    inputCost: "Input cost",
+    outputCost: "Output cost",
+    textOnly: "Text only",
+    capabilities: {
+      supports_vision: "Vision",
+      supports_reasoning: "Reasoning",
+      supports_function_calling: "Tools",
+    },
   },
   errors: {
     emptyMessage: "Message can't be empty",
     fixConnection:
       "Ensure your connection is working properly before you continue writing",
     createChat: "Error creating the chat",
+    requestedTargetUnavailable:
+      "The model or agent that you are trying to use either doesn't exist or is currently unavailable",
   },
 } as const;

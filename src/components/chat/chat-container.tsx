@@ -38,7 +38,7 @@ export function ChatContainer({
   placeholder,
   hint,
   hintTone = "destructive",
-}: ChatContainerProps) {
+}: Readonly<ChatContainerProps>) {
   const isInputDisabled = disabled || blocked;
   const showStop = sending && !!onStop;
 

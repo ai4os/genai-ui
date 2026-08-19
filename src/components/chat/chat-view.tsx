@@ -39,7 +39,7 @@ function formatTime(iso: string) {
   }).format(new Date(iso));
 }
 
-function ModelAvatar({ model }: { model?: string | null }) {
+function ModelAvatar({ model }: Readonly<{ model?: string | null }>) {
   const icon = getModelIcon(model);
 
   if (icon) {
@@ -115,14 +115,14 @@ function MessageBubble({
   agentName,
   createdAt,
   isStreaming,
-}: {
+}: Readonly<{
   role: string;
   content: string;
   model?: string | null;
   agentName?: string | null;
   createdAt: string;
   isStreaming?: boolean;
-}) {
+}>) {
   const isUser = role === "user";
   const isAgent = !!agentName;
 
@@ -265,12 +265,12 @@ export function ChatView({
   initialMessages,
   models,
   agents,
-}: {
+}: Readonly<{
   chatId: string;
   initialMessages: MessageOut[];
   models: ModelInfo[];
   agents: AgentInfo[];
-}) {
+}>) {
   const [messages, setMessages] = useState(initialMessages);
   const [input, setInput] = useState("");
   const lastAssistantMsg = initialMessages.findLast(
@@ -292,7 +292,7 @@ export function ChatView({
   const abortRef = useRef<AbortController | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const hasCheckedPending = useRef(false);
-
+  
   useEffect(() => {
     scrollRef.current?.scrollTo({
       top: scrollRef.current.scrollHeight,

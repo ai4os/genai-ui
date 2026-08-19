@@ -25,6 +25,12 @@ export type MessageOut = {
 export type ModelInfo = {
   id: string;
   status: string;
+  max_input_tokens?: number;
+  supports_vision?: boolean;
+  supports_reasoning?: boolean;
+  supports_function_calling?: boolean;
+  input_cost_per_million?: number;
+  output_cost_per_million?: number;
 };
 
 export type AgentInfo = {

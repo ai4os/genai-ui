@@ -18,6 +18,6 @@ export async function getModels(): Promise<ModelInfo[]> {
   if (!res.ok) {
     throw new ApiError(res.status, `Error retrieving models: ${res.status}`);
   }
-
+  
   return res.json();
 }

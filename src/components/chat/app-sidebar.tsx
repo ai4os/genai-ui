@@ -58,7 +58,7 @@ function groupChats(chats: ChatSummary[]) {
   }));
 }
 
-function Highlighted({ text, query }: { text: string; query: string }) {
+function Highlighted({ text, query }: Readonly<{ text: string; query: string }>) {
   if (!query.trim()) return <>{text}</>;
   const idx = text.toLowerCase().indexOf(query.trim().toLowerCase());
   if (idx === -1) return <>{text}</>;
@@ -74,7 +74,7 @@ function Highlighted({ text, query }: { text: string; query: string }) {
   );
 }
 
-export function AppSidebar({ chats, userMenu }: AppSidebarProps) {
+export function AppSidebar({ chats, userMenu }: Readonly<AppSidebarProps>) {
   const pathname = usePathname();
   const [query, setQuery] = useState("");
 

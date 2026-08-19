@@ -3,11 +3,20 @@ import { redirect } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { landingContent } from "@/content/landing";
 
-export default async function LandingPage() {
+type SearchParams = { callbackUrl?: string };
+
+export default async function LandingPage({
+  searchParams,
+}: Readonly<{
+  searchParams: Promise<SearchParams>;
+}>) {
+  const { callbackUrl } = await searchParams;
+  const target = getSafeCallbackUrl(callbackUrl);
+
   const session = await auth();
 
   if (session && !session.error) {
-    redirect("/chat");
+    redirect(target);
   }
 
   return (
@@ -103,7 +112,7 @@ export default async function LandingPage() {
           </p>
           <div className="flex flex-wrap items-center gap-5">
             {/* TODO: review missing logos */}
-            <img src="/logos/eosc-arena.png" className="w-50" /> 
+            <img src="/logos/eosc-arena.png" className="w-50" />
           </div>
         </div>
       </div>
@@ -113,14 +122,40 @@ export default async function LandingPage() {
         <form
           action={async () => {
             "use server";
-            await signIn("keycloak", { redirectTo: "/chat" });
+            await signIn("keycloak", { redirectTo: target });
           }}
         >
-          <Button type="submit" variant="brandPrimary" size="pill" className="w-full">
+          <Button
+            type="submit"
+            variant="brandPrimary"
+            size="pill"
+            className="w-full"
+          >
             {landingContent.auth.loginButton}
           </Button>
         </form>
       </div>
     </main>
   );
+}
+
+function getSafeCallbackUrl(raw?: string): string {
+  if (!raw) return "/chat";
+
+  if (raw.startsWith("/") && !raw.startsWith("//")) {
+    return raw;
+  }
+
+  try {
+    const url = new URL(raw);
+    const appOrigin = new URL(process.env.AUTH_URL ?? "http://localhost:3000")
+      .origin;
+    if (url.origin === appOrigin) {
+      return url.pathname + url.search;
+    }
+  } catch {
+    // raw no es una URL válida — ignorar y caer al fallback
+  }
+
+  return "/chat";
 }
