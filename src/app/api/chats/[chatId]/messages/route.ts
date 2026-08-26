@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { postMessageStream } from "@/lib/api/chats";
 import { ApiError } from "@/lib/api/errors";
-import type { MessageTarget } from "@/lib/api/types";
+import type { MessageImage, MessageTarget } from "@/lib/api/types";
 import { apiContent } from "@/content/api";
 
 export const dynamic = "force-dynamic";
@@ -11,7 +11,7 @@ export async function POST(
   { params }: { params: Promise<{ chatId: string }> },
 ) {
   const { chatId } = await params;
-  const { content, model_id, agent_id } = await req.json();
+  const { content, model_id, agent_id, images } = await req.json();
 
   if ((model_id && agent_id) || (!model_id && !agent_id)) {
     return new Response(
@@ -20,10 +20,18 @@ export async function POST(
     );
   }
   const target: MessageTarget = model_id ? { model_id } : { agent_id };
+  const imagePayload: MessageImage[] | undefined =
+    Array.isArray(images) && images.length ? images : undefined;
 
   let upstream: Response;
   try {
-    upstream = await postMessageStream(chatId, content, target, req.signal);
+    upstream = await postMessageStream(
+      chatId,
+      content,
+      target,
+      req.signal,
+      imagePayload,
+    );
   } catch (err) {
     if (err instanceof ApiError) {
       return new Response(err.message, { status: err.status });

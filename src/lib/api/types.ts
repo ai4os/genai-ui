@@ -12,6 +12,11 @@ export type ChatDetail = ChatSummary & {
 
 export type MessageRole = "system" | "user" | "assistant" | "tool";
 
+export type MessageImage = {
+  mime_type: string;
+  data: string; // base64 sin prefijo "data:...;base64,"
+};
+
 export type MessageOut = {
   id: string;
   role: MessageRole;
@@ -20,6 +25,23 @@ export type MessageOut = {
   created_at: string;
   model_id: string | null;
   agent_id: string | null;
+  images?: MessageImage[] | null;
+};
+
+export type ChatImageAttachment = {
+  id: string;
+  name: string;
+  mimeType: string;
+  dataUrl: string; // base64 data URL
+  sizeBytes: number;
+};
+
+export type ChatError = {
+  title: string;
+  message: string;
+  content: string;
+  target: MessageTarget;
+  images?: MessageImage[];
 };
 
 export type ModelInfo = {

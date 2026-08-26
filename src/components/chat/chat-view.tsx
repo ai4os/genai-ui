@@ -11,6 +11,9 @@ import type {
   ModelInfo,
   AgentInfo,
   MessageTarget,
+  ChatImageAttachment,
+  MessageImage,
+  ChatError,
 } from "@/lib/api/types";
 import { parseSSEStream } from "@/lib/sse";
 import ReactMarkdown from "react-markdown";
@@ -37,6 +40,13 @@ function formatTime(iso: string) {
     hour: "2-digit",
     minute: "2-digit",
   }).format(new Date(iso));
+}
+
+function toImagePayload(images: ChatImageAttachment[]): MessageImage[] {
+  return images.map((img) => ({
+    mime_type: img.mimeType,
+    data: img.dataUrl.split(",")[1] ?? img.dataUrl,
+  }));
 }
 
 function ModelAvatar({ model }: Readonly<{ model?: string | null }>) {
@@ -68,6 +78,45 @@ function TypingDots() {
         />
       ))}
     </span>
+  );
+}
+
+function MessageImages({
+  images,
+}: Readonly<{ images?: MessageImage[] | null }>) {
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+
+  if (!images?.length) return null;
+
+  return (
+    <>
+      <div className="mb-2 flex flex-wrap gap-2 justify-end">
+        {images.map((img, i) => {
+          const src = `data:${img.mime_type};base64,${img.data}`;
+          return (
+            <img
+              key={i}
+              src={src}
+              className="h-40 w-40 rounded-lg border object-cover cursor-pointer hover:opacity-90 transition-opacity"
+              onClick={() => setSelectedImage(src)}
+            />
+          );
+        })}
+      </div>
+
+      {/* Modal to view image */}
+      {selectedImage && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm"
+          onClick={() => setSelectedImage(null)}
+        >
+          <img
+            src={selectedImage}
+            className="max-h-full max-w-full rounded-md object-contain shadow-2xl"
+          />
+        </div>
+      )}
+    </>
   );
 }
 
@@ -111,6 +160,7 @@ function parseAgentContent(rawContent: string) {
 function MessageBubble({
   role,
   content,
+  images,
   model,
   agentName,
   createdAt,
@@ -118,6 +168,7 @@ function MessageBubble({
 }: Readonly<{
   role: string;
   content: string;
+  images?: MessageImage[] | null;
   model?: string | null;
   agentName?: string | null;
   createdAt: string;
@@ -129,136 +180,140 @@ function MessageBubble({
   const { displayThinking, displayContent } = parseAgentContent(content);
 
   const isTyping = isStreaming && !displayContent && !displayThinking;
+  
+  const hasTextContent = !!(displayContent || displayThinking || isTyping);
 
   return (
     <div
       className={cn(
-        "group flex",
-        isUser ? "justify-end" : "flex-col justify-center",
+        "group flex flex-col",
+        isUser ? "items-end" : "justify-center",
       )}
     >
-      {!isUser && (
-        <div className="flex items-center">
-          {isAgent ? (
-            <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-primary-700">
-              <Bot className="size-4" />
-            </div>
-          ) : (
-            <ModelAvatar model={model} />
-          )}
-          <span className="pl-4 text-xs text-muted-foreground">
-            {isAgent ? agentName : model}
-          </span>
-        </div>
-      )}
-      <div
-        className={cn(
-          "relative max-w-[100%] rounded-md px-4 py-2.5 text-sm",
-          isUser
-            ? "rounded-br-sm bg-primary-600 text-primary-foreground shadow-1"
-            : "text-foreground",
-        )}
-      >
-        {isTyping ? (
-          <TypingDots />
-        ) : (
-          <div className="flex flex-col gap-2">
-            {/* Thinking expansion panel */}
-            {displayThinking && (
-              <details className="group/details border-l-2 border-muted-foreground/30 pl-3 my-1">
-                <summary className="flex items-center gap-1.5 cursor-pointer text-xs font-medium text-muted-foreground hover:text-foreground transition-colors list-none [&::-webkit-details-marker]:hidden">
-                  {chatsContent.chat.thinking}
-                  <ChevronDown className="h-3.5 w-3.5 transition-transform duration-200 group-open/details:rotate-180" />
-                </summary>
-                <div className="mt-2 text-muted-foreground/80 prose prose-sm max-w-none prose-p:my-1 text-xs">
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                    {displayThinking}
-                  </ReactMarkdown>
-                </div>
-              </details>
-            )}
+      {/* Images */}
+      {isUser && <MessageImages images={images} />}
 
-            {/* Response */}
-            {displayContent && (
-              <div
-                className={cn(
-                  "prose prose-sm max-w-none break-words",
-                  "prose-p:leading-relaxed prose-p:my-3",
-                  "prose-code:before:hidden prose-code:after:hidden",
-                  "prose-a:text-primary prose-a:underline-offset-2 hover:prose-a:text-primary/80",
-                  "prose-li:my-0.5",
-                  "prose-th:border prose-th:border-border prose-th:p-2 prose-th:bg-muted",
-                  "prose-td:border prose-td:border-border prose-td:p-2",
-                  isUser ? "prose-invert" : "dark:prose-invert",
-                )}
-              >
-                <ReactMarkdown 
-                  remarkPlugins={[remarkGfm]}
-                  components={{
-                    code({node, inline, className, children, ...props}: any) {
-                      const match = /language-(\w+)/.exec(className || '');
-                      
-                      // code block
-                      if (!inline && match) {
-                        return (
-                          <div className="relative mt-4 mb-4 rounded-md overflow-hidden border border-border">
-                            <div className="flex items-center justify-between px-4 py-1.5 bg-muted/50 text-xs text-muted-foreground border-b border-border">
-                              <span>{match[1]}</span>
-                            </div>
-                            <SyntaxHighlighter
-                              {...props}
-                              style={atelierSeasideLight}
-                              language={match[1]}
-                              PreTag="div"
-                              customStyle={{ margin: 0, padding: '1rem', background: 'transparent' }}
-                              className="text-[13px]"
-                            >
-                              {String(children).replace(/\n$/, '')}
-                            </SyntaxHighlighter>
-                          </div>
-                        );
-                      }
-                      
-                      // code line
-                      return (
-                        <code 
-                          {...props} 
-                          className={cn(
-                            "bg-muted/60 text-foreground px-1.5 py-0.5 rounded-md font-mono text-[0.85em] border border-border/50", 
-                            className
-                          )}
-                        >
-                          {children}
-                        </code>
-                      );
-                    }
-                  }}
-                >
-                  {displayContent}
-                </ReactMarkdown>
+      <div className={cn("flex", isUser ? "justify-end" : "flex-col")}>
+        {/* Model/Agent avatar */}
+        {!isUser && (
+          <div className="flex items-center">
+            {isAgent ? (
+              <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-primary-700">
+                <Bot className="size-4" />
               </div>
+            ) : (
+              <ModelAvatar model={model} />
             )}
+            <span className="pl-4 text-xs text-muted-foreground">
+              {isAgent ? agentName : model}
+            </span>
           </div>
         )}
-        <span
+
+        {/* Content */}
+        <div
           className={cn(
-            "pointer-events-none absolute -bottom-5 whitespace-nowrap text-[11px] text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100",
-            isUser ? "right-0" : "left-0",
+            "relative max-w-[100%] rounded-md text-sm",
+            hasTextContent ? "px-4 py-2.5" : "",
+            isUser
+              ? hasTextContent ? "rounded-br-sm bg-primary-600 text-primary-foreground shadow-1 mt-1" : "" // Estilos de burbuja solo si hay texto
+              : "text-foreground",
           )}
         >
-          {formatTime(createdAt)}
-        </span>
+          {/* Text */}
+          {hasTextContent && (
+            isTyping ? (
+              <TypingDots />
+            ) : (
+              <div className="flex flex-col gap-2">
+                {/* Thinking expansion panel */}
+                {displayThinking && (
+                  <details className="group/details border-l-2 border-muted-foreground/30 pl-3 my-1">
+                    <summary className="flex items-center gap-1.5 cursor-pointer text-xs font-medium text-muted-foreground hover:text-foreground transition-colors list-none [&::-webkit-details-marker]:hidden">
+                      {chatsContent.chat.thinking}
+                      <ChevronDown className="h-3.5 w-3.5 transition-transform duration-200 group-open/details:rotate-180" />
+                    </summary>
+                    <div className="mt-2 text-muted-foreground/80 prose prose-sm max-w-none prose-p:my-1 text-xs">
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                        {displayThinking}
+                      </ReactMarkdown>
+                    </div>
+                  </details>
+                )}
+
+                {/* Response */}
+                {displayContent && (
+                  <div
+                    className={cn(
+                      "prose prose-sm max-w-none break-words",
+                      "prose-p:leading-relaxed prose-p:my-3",
+                      "prose-code:before:hidden prose-code:after:hidden",
+                      "prose-a:text-primary prose-a:underline-offset-2 hover:prose-a:text-primary/80",
+                      "prose-li:my-0.5",
+                      "prose-th:border prose-th:border-border prose-th:p-2 prose-th:bg-muted",
+                      "prose-td:border prose-td:border-border prose-td:p-2",
+                      isUser ? "prose-invert" : "dark:prose-invert",
+                    )}
+                  >
+                    <ReactMarkdown
+                      remarkPlugins={[remarkGfm]}
+                      components={{
+                        code({ node, inline, className, children, ...props }: any) {
+                          const match = /language-(\w+)/.exec(className || "");
+                          // code block
+                          if (!inline && match) {
+                            return (
+                              <div className="relative mt-4 mb-4 rounded-md overflow-hidden border border-border">
+                                <div className="flex items-center justify-between px-4 py-1.5 bg-muted/50 text-xs text-muted-foreground border-b border-border">
+                                  <span>{match[1]}</span>
+                                </div>
+                                <SyntaxHighlighter
+                                  {...props}
+                                  style={atelierSeasideLight}
+                                  language={match[1]}
+                                  PreTag="div"
+                                  customStyle={{ margin: 0, padding: "1rem", background: "transparent" }}
+                                  className="text-[13px]"
+                                >
+                                  {String(children).replace(/\n$/, "")}
+                                </SyntaxHighlighter>
+                              </div>
+                            );
+                          }
+                          // code line
+                          return (
+                            <code
+                              {...props}
+                              className={cn("bg-muted/60 text-foreground px-1.5 py-0.5 rounded-md font-mono text-[0.85em] border border-border/50", className)}
+                            >
+                              {children}
+                            </code>
+                          );
+                        },
+                      }}
+                    >
+                      {displayContent}
+                    </ReactMarkdown>
+                  </div>
+                )}
+              </div>
+            )
+          )}
+
+          {/* Timestamp */}
+          <span
+            className={cn(
+              "pointer-events-none absolute -bottom-5 whitespace-nowrap text-[11px] text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100",
+              isUser ? "right-0" : "left-0",
+            )}
+          >
+            {formatTime(createdAt)}
+          </span>
+        </div>
       </div>
     </div>
   );
 }
-
-type ChatError = {
-  title: string;
-  message: string;
-  content: string;
-  target: MessageTarget;
-};
 
 export function ChatView({
   chatId,
@@ -292,7 +347,21 @@ export function ChatView({
   const abortRef = useRef<AbortController | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const hasCheckedPending = useRef(false);
-  
+
+  // Images
+  const [images, setImages] = useState<ChatImageAttachment[]>([]);
+  const selectedModel =
+    mode === "model" ? models.find((m) => m.id === model) : undefined;
+  const imagesEnabled = mode === "model" && !!selectedModel?.supports_vision;
+  const imagesDisabledReason =
+    mode === "agent"
+      ? chatsContent.chat.imagesUnsupportedAgent
+      : chatsContent.chat.imagesUnsupportedModel;
+
+  useEffect(() => {
+    if (!imagesEnabled && images.length > 0) setImages([]);
+  }, [imagesEnabled]);
+
   useEffect(() => {
     scrollRef.current?.scrollTo({
       top: scrollRef.current.scrollHeight,
@@ -301,7 +370,12 @@ export function ChatView({
   }, [messages, error]);
 
   const runStream = useCallback(
-    async (content: string, target: MessageTarget, assistantMsgId: string) => {
+    async (
+      content: string,
+      target: MessageTarget,
+      assistantMsgId: string,
+      images?: MessageImage[],
+    ) => {
       setSending(true);
       setStreamingId(assistantMsgId);
       setError(null);
@@ -313,7 +387,11 @@ export function ChatView({
         const res = await fetch(`/api/chats/${chatId}/messages`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ content, ...target }),
+          body: JSON.stringify({
+            content,
+            ...target,
+            ...(images?.length ? { images } : {}),
+          }),
           signal: controller.signal,
         });
 
@@ -327,7 +405,7 @@ export function ChatView({
           DeltaEvent | DoneEvent | ErrorEvent
         >(res.body)) {
           if (event === "delta") {
-            // Extraemos content y thinking del nuevo DeltaEvent[cite: 2, 3]
+            // Get content and thinking blocks
             const { content: chunk, thinking: thinkingChunk } =
               data as DeltaEvent;
 
@@ -336,9 +414,7 @@ export function ChatView({
                 m.id === assistantMsgId
                   ? {
                       ...m,
-                      // Concatenamos el contenido si viene en el chunk, si no mantenemos lo actual
                       content: chunk ? m.content + chunk : m.content,
-                      // Concatenamos el CoT si viene en el chunk
                       thinking: thinkingChunk
                         ? (m.thinking || "") + thinkingChunk
                         : m.thinking,
@@ -372,6 +448,7 @@ export function ChatView({
               message: errData?.message ?? apiContent.chat.modelError,
               content,
               target,
+              images,
             });
           }
         }
@@ -385,6 +462,7 @@ export function ChatView({
             message: apiContent.chat.checkConnection,
             content,
             target,
+            images,
           });
         }
       } finally {
@@ -397,10 +475,15 @@ export function ChatView({
   );
 
   const sendMessage = useCallback(
-    async (content: string, target: MessageTarget) => {
+    async (
+      content: string,
+      target: MessageTarget,
+      images: ChatImageAttachment[] = [],
+    ) => {
       const userMsgId = tempId();
       const assistantMsgId = tempId();
       const now = new Date().toISOString();
+      const imagePayload = images.length ? toImagePayload(images) : undefined;
 
       setMessages((prev) => [
         ...prev,
@@ -410,6 +493,7 @@ export function ChatView({
           content,
           model_id: null,
           agent_id: null,
+          images: imagePayload ?? null,
           created_at: now,
         },
         {
@@ -422,14 +506,14 @@ export function ChatView({
         },
       ]);
 
-      await runStream(content, target, assistantMsgId);
+      await runStream(content, target, assistantMsgId, imagePayload);
     },
     [runStream],
   );
 
   function handleRetry() {
     if (!error) return;
-    const { content, target } = error;
+    const { content, target, images } = error;
     setError(null);
 
     const assistantMsgId = tempId();
@@ -446,7 +530,7 @@ export function ChatView({
       },
     ]);
 
-    runStream(content, target, assistantMsgId);
+    runStream(content, target, assistantMsgId, images);
   }
 
   useEffect(() => {
@@ -463,17 +547,19 @@ export function ChatView({
       setAgent(pending.target.agent_id);
     }
 
-    sendMessage(pending.content, pending.target);
+    sendMessage(pending.content, pending.target, pending.images ?? []);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [chatId]);
 
   async function handleSend() {
     const content = input.trim();
-    if (!content || sending || error) return;
+    if ((!content && !images) || sending || error) return;
     setInput("");
     const target: MessageTarget =
       mode === "agent" ? { agent_id: agent } : { model_id: model };
-    await sendMessage(content, target);
+    const attachedImages = images;
+    setImages([]);
+    await sendMessage(content, target, attachedImages);
   }
 
   function handleStop() {
@@ -508,7 +594,7 @@ export function ChatView({
             key={m.id}
             role={m.role}
             content={m.content}
-            thinking={m.thinking}
+            images={m.images}
             model={m.model_id}
             agentName={m.agent_id ? agentsById.get(m.agent_id) : null}
             createdAt={m.created_at}
@@ -548,6 +634,11 @@ export function ChatView({
         blocked={!!error}
         hint={error ? chatsContent.errors.fixConnection : null}
         hintTone="error"
+        imagesEnabled={imagesEnabled}
+        imagesDisabledReason={imagesDisabledReason}
+        images={images}
+        onImagesChange={setImages}
+        maxTotalBytes={15_000_000} // 15 MB - if this variable changes, update the corresponding API variable
       />
     </div>
   );

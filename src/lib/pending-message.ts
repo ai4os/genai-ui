@@ -1,20 +1,22 @@
-import type { MessageTarget } from "./api/types";
+import type { ChatImageAttachment, MessageTarget } from "./api/types";
 
 const PREFIX = "pending-message:";
 
 export type PendingMessage = {
   content: string;
   target: MessageTarget;
+  images?: ChatImageAttachment[];
 };
 
 export function setPendingMessage(
   chatId: string,
   content: string,
   target: MessageTarget,
+  images?: ChatImageAttachment[],
 ) {
   sessionStorage.setItem(
     `${PREFIX}${chatId}`,
-    JSON.stringify({ content, target }),
+    JSON.stringify({ content, target, images }),
   );
 }
 

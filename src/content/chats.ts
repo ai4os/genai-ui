@@ -25,6 +25,11 @@ export const chatsContent = {
     retry: "Retry",
     blocked: "Messaging blocked",
     thinking: "Thinking",
+    attachImage: "Attach image",
+    removeImage: "Remove image",
+    imagesUnsupportedModel: "This model doesn't support image input",
+    imagesUnsupportedAgent: "Agents don't support image input yet",
+    imagesTooLarge: "Total image size can't exceed {max}",
   },
   selector: {
     maxInputTokens: "Max input tokens",

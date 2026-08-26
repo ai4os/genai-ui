@@ -5,7 +5,12 @@ import { useRouter } from "next/navigation";
 import { startChatAction } from "@/lib/actions/chats";
 import { setPendingMessage } from "@/lib/pending-message";
 import { chatsContent } from "@/content/chats";
-import type { AgentInfo, ModelInfo, MessageTarget } from "@/lib/api/types";
+import type {
+  AgentInfo,
+  ModelInfo,
+  MessageTarget,
+  ChatImageAttachment,
+} from "@/lib/api/types";
 import { ModelAgentSelector, type Mode } from "./model-agent-selector";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
@@ -23,7 +28,7 @@ export function StartChatFormClient({
   initialModelId?: string;
   initialAgentId?: string;
 }>) {
-const [content, setContent] = useState("");
+  const [content, setContent] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
@@ -38,8 +43,21 @@ const [content, setContent] = useState("");
   const [mode, setMode] = useState<Mode>(requestedAgent ? "agent" : "model");
   const [model, setModel] = useState(requestedModel?.id ?? models[0]?.id);
   const [agent, setAgent] = useState(requestedAgent?.id ?? agents[0]?.id);
+  const [images, setImages] = useState<ChatImageAttachment[]>([]);
+
+  const selectedModel =
+    mode === "model" ? models.find((m) => m.id === model) : undefined;
+  const imagesEnabled = mode === "model" && !!selectedModel?.supports_vision;
+  const imagesDisabledReason =
+    mode === "agent"
+      ? chatsContent.chat.imagesUnsupportedAgent
+      : chatsContent.chat.imagesUnsupportedModel;
 
   useEffect(() => {
+    if (!imagesEnabled && images.length > 0) setImages([]);
+  }, [imagesEnabled]);
+
+    useEffect(() => {
     if (
       (initialModelId && !requestedModel) ||
       (initialAgentId && !requestedAgent)
@@ -64,7 +82,8 @@ const [content, setContent] = useState("");
         const formData = new FormData();
         formData.set("content", trimmed);
         const chat = await startChatAction(formData);
-        setPendingMessage(chat.id, trimmed, target);
+        setPendingMessage(chat.id, trimmed, target, images);
+        setImages([]);
         router.push(`/chat/${chat.id}`);
       } catch (err) {
         setError(
@@ -100,7 +119,11 @@ const [content, setContent] = useState("");
 
       <div className="flex flex-1 flex-col items-center justify-center gap-4 px-6 text-center">
         <div className="flex size-40 items-center justify-center rounded-2xl ">
-            <img src="/logos/genai.svg" alt="" className="size-35 drop-shadow-xl" />
+          <img
+            src="/logos/genai.svg"
+            alt=""
+            className="size-35 drop-shadow-xl"
+          />
         </div>
         <h2 className="text-lg font-semibold">
           {chatsContent.chat.emptyStateTitle}
@@ -131,6 +154,11 @@ const [content, setContent] = useState("");
         placeholder={chatsContent.chat.inputPlaceholder}
         hint={error}
         hintTone="destructive"
+        imagesEnabled={imagesEnabled}
+        imagesDisabledReason={imagesDisabledReason}
+        images={images}
+        onImagesChange={setImages}
+        maxTotalBytes={15_000_000} // 15 MB - if this variable changes, update the corresponding API variable
       />
     </div>
   );
