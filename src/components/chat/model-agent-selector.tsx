@@ -312,7 +312,7 @@ export function ModelAgentSelector({
               {detailItem ? (
                 <>
                   <h4 className="text-sm font-semibold text-foreground mb-0.5">
-                    {mode === "model" ? detailMeta?.name : detailItem.name}
+                    {mode === "model" ? detailMeta?.name : (detailItem as AgentInfo).name}
                   </h4>
                   <p className="text-[11.5px] text-muted-foreground mb-3 uppercase">
                     {mode === "model"
