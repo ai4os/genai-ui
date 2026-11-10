@@ -1,12 +1,20 @@
-"use client";
-
-import { useRef, useState } from "react";
-import { ImagePlus, X } from "lucide-react";
+import { useLayoutEffect, useRef, useState } from "react";
+import { ImagePlus, Paperclip, Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { chatsContent } from "@/content/chats";
 import { cn } from "@/lib/utils";
-import type { ChatImageAttachment } from "@/lib/api/types";
+import { v4 as uuidv4 } from "uuid";
+import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { formatFileSize } from "@/lib/chat-files";
+import type { ChatImageAttachment } from "@/lib/types";
+
+const MAX_TEXTAREA_HEIGHT = 160;
 
 type ChatContainerProps = {
   value: string;
@@ -14,28 +22,25 @@ type ChatContainerProps = {
   onSend: () => void;
   /** If passed together with sending=true, shows the stop button instead of send. */
   onStop?: () => void;
-  /** Streaming in progress: swaps the send button for the stop button (only if onStop is provided). */
   sending?: boolean;
   /** Disables the input and button without changing style (e.g. isPending in the new chat form). */
   disabled?: boolean;
   /** Connection error blocked variant */
   blocked?: boolean;
   placeholder?: string;
-  /** Optional text below the composer. */
   hint?: string | null;
-  /**
-   * "error": red using --color-error* tokens (connection block).
-   * "destructive": normal text-destructive (validation, e.g. empty message).
-   */
   hintTone?: "error" | "destructive";
-  /** Enables add image button */
   imagesEnabled?: boolean;
-  /** Image button tooltip when it is disabled. */
   imagesDisabledReason?: string;
+  filesEnabled?: boolean;
+  filesDisabledReason?: string;
   images?: ChatImageAttachment[];
   onImagesChange?: (images: ChatImageAttachment[]) => void;
   maxImages?: number;
   maxTotalBytes?: number;
+  files?: File[];
+  onFilesChange?: (files: File[]) => void;
+  maxFiles?: number;
 };
 
 function readImageAsAttachment(file: File): Promise<ChatImageAttachment> {
@@ -43,7 +48,7 @@ function readImageAsAttachment(file: File): Promise<ChatImageAttachment> {
     const reader = new FileReader();
     reader.onload = () =>
       resolve({
-        id: crypto.randomUUID(),
+        id: uuidv4(),
         name: file.name,
         mimeType: file.type,
         dataUrl: reader.result as string,
@@ -71,27 +76,50 @@ export function ChatContainer({
   hintTone = "destructive",
   imagesEnabled = false,
   imagesDisabledReason,
+  filesEnabled = false,
+  filesDisabledReason,
   images = [],
   onImagesChange,
   maxImages = 4,
   maxTotalBytes = 15_000_000, // 15 MB - if this variable changes, update the corresponding API variable
+  files = [],
+  onFilesChange,
+  maxFiles = 5,
 }: Readonly<ChatContainerProps>) {
   const isInputDisabled = disabled || blocked;
+
   const showStop = sending && !!onStop;
+
+  const imageInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const canAttach = imagesEnabled && !isInputDisabled && !!onImagesChange;
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const canAttachImages = imagesEnabled && !isInputDisabled && !!onImagesChange;
+  const isImageDisabled = !canAttachImages || images.length >= maxImages;
+
+  const canAttachFiles = filesEnabled && !isInputDisabled && !!onFilesChange;
+  const isFileDisabled = !canAttachFiles || files.length >= maxFiles;
+
   const [imageError, setImageError] = useState<string | null>(null);
 
   const currentTotalBytes = images.reduce((sum, img) => sum + img.sizeBytes, 0);
 
-  async function handleFiles(fileList: FileList | null) {
+  // Auto-grow the textarea with its content (and shrink back after sending)
+  useLayoutEffect(() => {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${Math.min(el.scrollHeight, MAX_TEXTAREA_HEIGHT)}px`;
+  }, [value]);
+
+  async function handleImageFiles(fileList: FileList | null) {
     if (!fileList || !onImagesChange) return;
-    const files = Array.from(fileList)
+    const picked = Array.from(fileList)
       .filter((f) => f.type.startsWith("image/"))
       .slice(0, Math.max(0, maxImages - images.length));
-    if (!files.length) return;
+    if (!picked.length) return;
 
-    const incomingBytes = files.reduce((sum, f) => sum + f.size, 0);
+    const incomingBytes = picked.reduce((sum, f) => sum + f.size, 0);
     if (currentTotalBytes + incomingBytes > maxTotalBytes) {
       setImageError(
         chatsContent.chat.imagesTooLarge.replace(
@@ -103,8 +131,17 @@ export function ChatContainer({
     }
 
     setImageError(null);
-    const attachments = await Promise.all(files.map(readImageAsAttachment));
+    const attachments = await Promise.all(picked.map(readImageAsAttachment));
     onImagesChange([...images, ...attachments]);
+  }
+
+  function handleGenericFiles(fileList: FileList | null) {
+    if (!fileList || !onFilesChange) return;
+    const incoming = Array.from(fileList).slice(
+      0,
+      Math.max(0, maxFiles - files.length),
+    );
+    if (incoming.length) onFilesChange([...files, ...incoming]);
   }
 
   function removeImage(id: string) {
@@ -112,9 +149,14 @@ export function ChatContainer({
     onImagesChange?.(images.filter((img) => img.id !== id));
   }
 
+  function removeGenericFile(index: number) {
+    onFilesChange?.(files.filter((_, i) => i !== index));
+  }
+
   return (
     <div className="border-t bg-background px-4 py-3 md:px-8">
       <div className="mx-auto max-w-3xl">
+        {/* Attached images preview */}
         {images.length > 0 && (
           <div className="mb-2">
             <div className="flex flex-wrap gap-2">
@@ -144,54 +186,161 @@ export function ChatContainer({
           </div>
         )}
 
+        {/* Attached files preview */}
+        {files.length > 0 && (
+          <div className="mb-2 flex flex-wrap gap-2">
+            {files.map((file, idx) => (
+              <div
+                key={idx}
+                className="flex items-center gap-2.5 rounded-lg border bg-muted/40 px-3 py-2 text-xs"
+              >
+                <div className="flex size-7 shrink-0 items-center justify-center rounded-md border bg-background">
+                  <Paperclip className="size-4 text-muted-foreground" />
+                </div>
+                <div className="flex flex-col min-w-0 max-w-[140px]">
+                  <span className="truncate font-medium text-foreground">
+                    {file.name}
+                  </span>
+                  <span className="text-[10px] text-muted-foreground">
+                    {formatFileSize(file.size)}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => removeGenericFile(idx)}
+                  className="ml-1 text-muted-foreground hover:text-foreground cursor-pointer"
+                >
+                  <X className="size-3.5" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
         <div
           className={cn(
-            "flex items-center gap-2 rounded-full border bg-background px-2 py-1.5 shadow-2",
+            "flex items-end gap-2 rounded-3xl border bg-background px-2 py-1.5 shadow-2",
             blocked &&
               "border-[var(--color-error-border)] bg-[var(--color-error-surface)]",
           )}
         >
+          {/* Hidden input for images */}
           <input
-            ref={fileInputRef}
+            ref={imageInputRef}
             type="file"
             accept="image/*"
             multiple
             hidden
             onChange={(e) => {
-              handleFiles(e.target.files);
+              handleImageFiles(e.target.files);
               e.target.value = "";
             }}
           />
-          <span
-            title={
-              imagesEnabled
-                ? chatsContent.chat.attachImage
-                : imagesDisabledReason
-            }
-            className="inline-block cursor-not-allowed"
-          >
-            <Button
-              type="button"
-              variant="outline"
-              size="icon"
-              disabled={!canAttach || images.length >= maxImages}
-              onClick={() => fileInputRef.current?.click()}
-              className="shrink-0 rounded-full disabled:opacity-40 disabled:pointer-events-none"
-            >
-              <ImagePlus className="size-4" />
-            </Button>
-          </span>
 
-          <Input
+          {/* Hidden input for files */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            hidden
+            onChange={(e) => {
+              handleGenericFiles(e.target.files);
+              e.target.value = "";
+            }}
+          />
+
+          {/* Dropdown menu to attach files */}
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              type="button"
+              disabled={isInputDisabled}
+              className={cn(
+                "inline-flex items-center justify-center rounded-full border border-input bg-background cursor-pointer size-9 shrink-0 shadow-sm hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-40",
+              )}
+            >
+              <Plus className="size-4" />
+            </DropdownMenuTrigger>
+
+            <DropdownMenuContent align="start" sideOffset={15} className="w-48">
+              {/* Images button */}
+              {isImageDisabled ? (
+                <Tooltip>
+                  <TooltipTrigger
+                    render={<span className="w-full cursor-not-allowed" />}
+                  >
+                    <DropdownMenuItem
+                      disabled={isImageDisabled}
+                      onClick={() => imageInputRef.current?.click()}
+                      className="w-full gap-2 cursor-pointer"
+                    >
+                      <ImagePlus className="size-4" />
+                      <span>{chatsContent.chat.attachImage}</span>
+                    </DropdownMenuItem>
+                  </TooltipTrigger>
+                  <TooltipContent>{imagesDisabledReason}</TooltipContent>
+                </Tooltip>
+              ) : (
+                <DropdownMenuItem
+                  disabled={isImageDisabled}
+                  onClick={() => imageInputRef.current?.click()}
+                  className="w-full gap-2 cursor-pointer"
+                >
+                  <ImagePlus className="size-4" />
+                  <span>{chatsContent.chat.attachImage}</span>
+                </DropdownMenuItem>
+              )}
+
+              {/* Files button */}
+              {isFileDisabled ? (
+                <Tooltip>
+                  <TooltipTrigger
+                    render={<span className="w-full cursor-not-allowed" />}
+                  >
+                    <DropdownMenuItem
+                      disabled={isFileDisabled}
+                      onClick={() => fileInputRef.current?.click()}
+                      className="w-full gap-2 cursor-pointer"
+                    >
+                      <Paperclip className="size-4" />
+                      <span>Add file</span>
+                    </DropdownMenuItem>
+                  </TooltipTrigger>
+                  <TooltipContent>{filesDisabledReason}</TooltipContent>
+                </Tooltip>
+              ) : (
+                <DropdownMenuItem
+                  disabled={isFileDisabled}
+                  onClick={() => fileInputRef.current?.click()}
+                  className="w-full gap-2 cursor-pointer"
+                >
+                  <Paperclip className="size-4" />
+                  <span>Add file</span>
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          <textarea
+            ref={textareaRef}
+            rows={1}
             value={value}
             onChange={(e) => onChange(e.target.value)}
             disabled={isInputDisabled}
             placeholder={blocked ? chatsContent.chat.blocked : placeholder}
             onKeyDown={(e) => {
-              if (e.key === "Enter" && !isInputDisabled) onSend();
+              // Enter sends; Shift+Enter falls through and inserts a line break.
+              if (
+                e.key === "Enter" &&
+                !e.shiftKey &&
+                !e.nativeEvent.isComposing
+              ) {
+                e.preventDefault();
+                if (!isInputDisabled) onSend();
+              }
             }}
-            className="border-none shadow-none focus-visible:ring-0 disabled:text-muted-foreground"
+            className="min-h-9 flex-1 resize-none bg-transparent px-3 py-2 text-sm leading-5 outline-none placeholder:text-muted-foreground disabled:text-muted-foreground"
           />
+
           {showStop ? (
             <Button
               variant="outline"

@@ -1,21 +1,17 @@
-"use client";
-
-import { useEffect, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
-import { startChatAction } from "@/lib/actions/chats";
-import { setPendingMessage } from "@/lib/pending-message";
+import { useEffect, useRef, useState } from "react";
 import { chatsContent } from "@/content/chats";
-import type {
-  AgentInfo,
-  ModelInfo,
-  MessageTarget,
-  ChatImageAttachment,
-} from "@/lib/api/types";
 import { ModelAgentSelector, type Mode } from "./model-agent-selector";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
 import { ChatContainer } from "./chat-container";
 import { toast } from "sonner";
+import { useChatAttachments } from "./use-chat-attatchments";
+import { useKnowledgeSelection } from "./knowledge-selection";
+import { Button } from "../ui/button";
+import type { ModelInfo, AgentInfo, MessageTarget } from "@/lib/types";
+import { useNavigate } from "react-router-dom"
+import { useCreateChat } from "@/lib/queries"
+import { setPendingMessage } from "@/lib/pending-message";
 
 export function StartChatFormClient({
   models,
@@ -28,10 +24,12 @@ export function StartChatFormClient({
   initialModelId?: string;
   initialAgentId?: string;
 }>) {
+  const navigate = useNavigate()
+const createChat = useCreateChat()
+const isPending = createChat.isPending
+
   const [content, setContent] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [isPending, startTransition] = useTransition();
-  const router = useRouter();
 
   const requestedModel = initialModelId
     ? models.find((m) => m.id === initialModelId && m.status !== "unhealthy")
@@ -41,57 +39,73 @@ export function StartChatFormClient({
     : undefined;
 
   const [mode, setMode] = useState<Mode>(requestedAgent ? "agent" : "model");
-  const [model, setModel] = useState(requestedModel?.id ?? models[0]?.id);
+  const [model, setModel] = useState(
+    requestedModel?.status === "healthy"
+      ? requestedModel.id
+      : (models.find((m) => m.status === "healthy")?.id ?? models[0]?.id),
+  );
   const [agent, setAgent] = useState(requestedAgent?.id ?? agents[0]?.id);
-  const [images, setImages] = useState<ChatImageAttachment[]>([]);
+  const createdChatId = useRef<string | null>(null);
 
   const selectedModel =
     mode === "model" ? models.find((m) => m.id === model) : undefined;
-  const imagesEnabled = mode === "model" && !!selectedModel?.supports_vision;
-  const imagesDisabledReason =
-    mode === "agent"
-      ? chatsContent.chat.imagesUnsupportedAgent
-      : chatsContent.chat.imagesUnsupportedModel;
+  const selectedAgent =
+    mode === "agent" ? agents.find((a) => a.id === agent) : undefined;
+
+  // Suggestions of the selected agent; fall back to the default ones
+  const customSuggestions = selectedAgent?.suggestions;
+  const suggestions = customSuggestions?.length
+    ? customSuggestions
+    : chatsContent.chat.suggestions;
+
+  const { setMilvusDisabled } = useKnowledgeSelection();
+  const milvusUnsupported =
+    selectedModel?.supports_function_calling !== true || mode === "agent";
 
   useEffect(() => {
-    if (!imagesEnabled && images.length > 0) setImages([]);
-  }, [imagesEnabled]);
+    setMilvusDisabled(milvusUnsupported);
+    return () => setMilvusDisabled(false);
+  }, [milvusUnsupported, setMilvusDisabled]);
 
-    useEffect(() => {
+  // Images + files
+  const { images, files, clear, containerProps } = useChatAttachments(
+    mode,
+    selectedModel,
+  );
+
+  useEffect(() => {
     if (
       (initialModelId && !requestedModel) ||
       (initialAgentId && !requestedAgent)
     ) {
       toast.error(chatsContent.errors.requestedTargetUnavailable);
     }
-  }, []);
+  }, [initialAgentId, initialModelId, requestedAgent, requestedModel]);
 
-  function submit(text: string) {
-    const trimmed = text.trim();
-    if (!trimmed) {
-      setError(chatsContent.errors.emptyMessage);
-      return;
-    }
-    setError(null);
-
-    const target: MessageTarget =
-      mode === "agent" ? { agent_id: agent } : { model_id: model };
-
-    startTransition(async () => {
-      try {
-        const formData = new FormData();
-        formData.set("content", trimmed);
-        const chat = await startChatAction(formData);
-        setPendingMessage(chat.id, trimmed, target, images);
-        setImages([]);
-        router.push(`/chat/${chat.id}`);
-      } catch (err) {
-        setError(
-          err instanceof Error ? err.message : chatsContent.errors.createChat,
-        );
-      }
-    });
+ async function submit(text: string) {
+  const trimmed = text.trim()
+  if (!trimmed) {
+    setError(chatsContent.errors.emptyMessage)
+    return
   }
+  setError(null)
+
+  const target: MessageTarget =
+    mode === "agent" ? { agent_id: agent } : { model_id: model }
+
+  try {
+    if (!createdChatId.current) {
+      const title = trimmed.length > 60 ? `${trimmed.slice(0, 60)}…` : trimmed
+      createdChatId.current = (await createChat.mutateAsync({ title })).id
+    }
+    const chatId = createdChatId.current
+    setPendingMessage(chatId, trimmed, target, images, files)
+    clear()
+    navigate(`/chat/${chatId}`)
+  } catch (err) {
+    setError(err instanceof Error ? err.message : chatsContent.errors.createChat)
+  }
+}
 
   function handleSuggestion(text: string) {
     setContent(text);
@@ -131,17 +145,18 @@ export function StartChatFormClient({
         <p className="max-w-sm text-sm text-muted-foreground">
           {chatsContent.chat.emptyStateSubtitle}
         </p>
-        <div className="flex max-w-lg flex-wrap justify-center gap-2">
-          {chatsContent.chat.suggestions.map((s) => (
-            <button
+        <div className="flex w-full max-w-lg flex-wrap justify-center gap-2">
+          {suggestions.map((s) => (
+            <Button
+              variant="brandLight"
               key={s}
               type="button"
               disabled={isPending}
               onClick={() => handleSuggestion(s)}
-              className="rounded-md border px-3.5 py-2 text-xs hover:border-primary-400 hover:bg-primary-50 disabled:opacity-50"
+              className="h-auto max-w-full whitespace-normal break-words rounded-md border px-3.5 py-2 text-center text-xs leading-snug hover:border-primary-400 hover:bg-primary-50 disabled:opacity-50"
             >
               {s}
-            </button>
+            </Button>
           ))}
         </div>
       </div>
@@ -154,10 +169,7 @@ export function StartChatFormClient({
         placeholder={chatsContent.chat.inputPlaceholder}
         hint={error}
         hintTone="destructive"
-        imagesEnabled={imagesEnabled}
-        imagesDisabledReason={imagesDisabledReason}
-        images={images}
-        onImagesChange={setImages}
+        {...containerProps}
         maxTotalBytes={15_000_000} // 15 MB - if this variable changes, update the corresponding API variable
       />
     </div>

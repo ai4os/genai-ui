@@ -1,8 +1,6 @@
-"use client";
-
 import { useMemo, useState } from "react";
-import Link from "next/link";
-import { Plus, Search } from "lucide-react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Loader2, Search, Trash2 } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -12,11 +10,22 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
-import { ChatSummary } from "@/lib/api/types";
-import { buttonVariants } from "../ui/button";
+import { Button, buttonVariants } from "../ui/button";
 import { chatsContent } from "@/content/chats";
 import { cn } from "@/lib/utils";
-import { usePathname } from "next/navigation";
+import { sharedContent } from "@/content/shared";
+import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
+import { toast } from "sonner";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "../ui/dialog";
+import type { ChatSummary } from "@/lib/types";
+import { useDeleteChat } from "@/lib/queries";
 
 type AppSidebarProps = {
   chats: ChatSummary[];
@@ -58,7 +67,10 @@ function groupChats(chats: ChatSummary[]) {
   }));
 }
 
-function Highlighted({ text, query }: Readonly<{ text: string; query: string }>) {
+function Highlighted({
+  text,
+  query,
+}: Readonly<{ text: string; query: string }>) {
   if (!query.trim()) return <>{text}</>;
   const idx = text.toLowerCase().indexOf(query.trim().toLowerCase());
   if (idx === -1) return <>{text}</>;
@@ -75,7 +87,10 @@ function Highlighted({ text, query }: Readonly<{ text: string; query: string }>)
 }
 
 export function AppSidebar({ chats, userMenu }: Readonly<AppSidebarProps>) {
-  const pathname = usePathname();
+  const { pathname } = useLocation();
+  const navigate = useNavigate();
+  const deleteChat = useDeleteChat();
+
   const [query, setQuery] = useState("");
 
   const filtered = useMemo(() => {
@@ -88,18 +103,38 @@ export function AppSidebar({ chats, userMenu }: Readonly<AppSidebarProps>) {
 
   const grouped = useMemo(() => groupChats(filtered), [filtered]);
 
+  const [chatToDelete, setChatToDelete] = useState<ChatSummary | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleConfirmDelete = async () => {
+    if (!chatToDelete) return;
+    const chatId = chatToDelete.id;
+
+    setIsDeleting(true);
+    try {
+      if (pathname === `/chat/${chatId}`) navigate("/chat", { replace: true });
+
+      await deleteChat.mutateAsync(chatId);
+      toast.success(chatsContent.chat.toasts.deleteSuccess);
+      setChatToDelete(null);
+    } catch {
+      toast.error(chatsContent.chat.toasts.deleteError);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   return (
     <Sidebar className="border-none bg-[linear-gradient(160deg,var(--brand-start)_0%,var(--brand-mid)_100%)] text-white">
       <SidebarHeader className="gap-3 p-4">
         <Link
-          href="/chat"
+          to="/chat"
           className={cn(
             buttonVariants({ variant: "brandGhost", size: "pill" }),
-            "justify-start",
+            "justify-center",
           )}
         >
-          <Plus className="size-4" />
-          {chatsContent.sidebar.newBtn}
+          + {chatsContent.sidebar.newBtn}
         </Link>
 
         <div className="flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-3 py-2">
@@ -123,15 +158,35 @@ export function AppSidebar({ chats, userMenu }: Readonly<AppSidebarProps>) {
               {groupItems.map((chat) => (
                 <SidebarMenuItem key={chat.id}>
                   <SidebarMenuButton
-                    render={<Link href={`/chat/${chat.id}`} />}
+                    render={<Link to={`/chat/${chat.id}`} />}
                     isActive={pathname === `/chat/${chat.id}`}
-                    className="text-white/85 hover:bg-white/10 hover:text-white data-active:bg-white/20 data-active:text-white"
+                    className="text-white/85 hover:bg-white/10 hover:text-white data-active:bg-white/20 data-active:text-white group-hover/menu-item:pr-9 group-focus-within/menu-item:pr-9"
                   >
-                    <Highlighted
-                      text={chat.title ?? chatsContent.sidebar.noTitle}
-                      query={query}
-                    />
+                    <span className="block min-w-0 flex-1 truncate">
+                      <Highlighted
+                        text={chat.title ?? chatsContent.sidebar.noTitle}
+                        query={query}
+                      />
+                    </span>
                   </SidebarMenuButton>
+
+                  <Tooltip>
+                    <TooltipTrigger
+                      render={
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          aria-label={sharedContent.delete}
+                          className="absolute inset-y-0 right-1 my-auto size-7 cursor-pointer text-white/60 opacity-0 transition-[opacity,color] hover:bg-transparent hover:text-white dark:hover:bg-transparent focus-visible:opacity-100 group-hover/menu-item:opacity-100 group-focus-within/menu-item:opacity-100 [@media(hover:none)]:opacity-100"
+                          onClick={() => setChatToDelete(chat)}
+                        >
+                          <Trash2 className="size-3.5" />
+                        </Button>
+                      }
+                    />
+                    <TooltipContent>{sharedContent.delete}</TooltipContent>
+                  </Tooltip>
                 </SidebarMenuItem>
               ))}
             </SidebarMenu>
@@ -141,6 +196,55 @@ export function AppSidebar({ chats, userMenu }: Readonly<AppSidebarProps>) {
       <SidebarFooter className="border-t border-white/20 p-4">
         {userMenu}
       </SidebarFooter>
+
+      <Dialog
+        open={chatToDelete !== null}
+        onOpenChange={(open) => {
+          if (!open && !isDeleting) setChatToDelete(null);
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{chatsContent.chat.deleteDialog.title}</DialogTitle>
+            <DialogDescription>
+              {chatsContent.chat.deleteDialog.description}
+            </DialogDescription>
+          </DialogHeader>
+
+          {/* TODO: uncomment it when the option to name and rename a chat is ready */}
+          {/* <p className="truncate rounded-md border bg-muted px-3 py-2 text-sm">
+            {chatToDelete?.title ?? chatsContent.sidebar.noTitle}
+          </p> */}
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={isDeleting}
+              onClick={() => setChatToDelete(null)}
+              className="cursor-pointer"
+            >
+              {sharedContent.cancel}
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={isDeleting}
+              onClick={handleConfirmDelete}
+              className="gap-1.5 cursor-pointer"
+            >
+              {isDeleting ? (
+                <>
+                  <Loader2 className="size-3.5 animate-spin" />
+                  {sharedContent.deleting}
+                </>
+              ) : (
+                sharedContent.delete
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Sidebar>
   );
 }

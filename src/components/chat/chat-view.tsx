@@ -1,28 +1,21 @@
-"use client";
-
-import { useState, useRef, useEffect, useCallback } from "react";
+import {
+  startTransition,
+  useState,
+  useRef,
+  useEffect,
+  useCallback,
+} from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import type {
-  MessageOut,
-  DeltaEvent,
-  DoneEvent,
-  ErrorEvent,
-  ModelInfo,
-  AgentInfo,
-  MessageTarget,
-  ChatImageAttachment,
-  MessageImage,
-  ChatError,
-} from "@/lib/api/types";
+
 import { parseSSEStream } from "@/lib/sse";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { consumePendingMessage } from "@/lib/pending-message";
-import Image from "next/image";
-import { getModelIcon, FallbackModelIcon } from "@/lib/model-icons";
+import remarkMath from "remark-math";
+import rehypeKatex from "rehype-katex";
+import { normalizeLatexDelimiters } from "@/lib/latex";
 import { ModelAgentSelector, type Mode } from "./model-agent-selector";
-import { Bot, ChevronDown } from "lucide-react";
+import { Bookmark, Bot, ChevronDown, Loader2, Paperclip } from "lucide-react";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
 import { ChatContainer } from "./chat-container";
@@ -30,9 +23,56 @@ import { apiContent } from "@/content/api";
 import { chatsContent } from "@/content/chats";
 import SyntaxHighlighter from "react-syntax-highlighter";
 import { atelierSeasideLight } from "react-syntax-highlighter/dist/esm/styles/hljs";
+import { v4 as uuidv4 } from "uuid";
+import { useKnowledgeSelection } from "./knowledge-selection";
+import { toast } from "sonner";
+import { useChatAttachments } from "./use-chat-attatchments";
+import { splitSources } from "@/lib/chat-sources";
+import { toolsContent } from "@/content/tools";
+import type {
+  ChatImageAttachment,
+  MessageImage,
+  MessageFileView,
+  MessageOut,
+  ModelInfo,
+  AgentInfo,
+  ChatError,
+  MessageTarget,
+  MessageFile,
+  DeltaEvent,
+  DoneEvent,
+  ErrorEvent,
+} from "@/lib/types";
+import { ApiError, apiRequest } from "@/lib/api";
+import { useApi, useGetToken } from "@/lib/use-api";
+import { FallbackModelIcon, getModelIcon } from "@/lib/model-icons";
+import { formatFileSize, uploadChatFiles } from "@/lib/chat-files";
+import { consumePendingMessage } from "@/lib/pending-message";
+
+const markdownComponents = {
+  a({
+    href,
+    children,
+    ...props
+  }: React.AnchorHTMLAttributes<HTMLAnchorElement>) {
+    return (
+      <a
+        href={href}
+        target="_blank"
+        rel="noopener noreferrer"
+        {...props}
+        className="underline text-primary"
+      >
+        {children}
+      </a>
+    );
+  },
+};
+const remarkPlugins = [remarkGfm, remarkMath];
+const rehypePlugins = [rehypeKatex];
 
 function tempId() {
-  return `temp-${crypto.randomUUID()}`;
+  return `temp-${uuidv4()}`;
 }
 
 function formatTime(iso: string) {
@@ -55,7 +95,7 @@ function ModelAvatar({ model }: Readonly<{ model?: string | null }>) {
   if (icon) {
     return (
       <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full">
-        <Image src={icon.src} alt={icon.alt} width={28} height={28} />
+        <img src={icon.src} alt={icon.alt} width={28} height={28} />
       </div>
     );
   }
@@ -120,47 +160,103 @@ function MessageImages({
   );
 }
 
-// Function that attempts to extract 'thinking’' and 'response' from a JSON string,
-// even if the JSON is incomplete (streaming)
-function parseAgentContent(rawContent: string) {
-  if (!rawContent || !rawContent.trimStart().startsWith("{")) {
-    return { displayThinking: null, displayContent: rawContent };
-  }
+function toUploadingFile(file: File): MessageFileView {
+  return {
+    filename: file.name,
+    mime_type: file.type || "application/octet-stream",
+    size: file.size,
+    uploading: true,
+  };
+}
 
-  try {
-    const parsed = JSON.parse(rawContent);
-    if (parsed.thinking || parsed.response) {
-      return {
-        displayThinking: parsed.thinking,
-        displayContent: parsed.response || "",
-      };
-    }
-  } catch (e) {
-    const thinkingMatch = rawContent.match(
-      /"thinking"\s*:\s*"([^]*?)(?:",\s*"response"|$)/,
-    );
-    const responseMatch = rawContent.match(
-      /"response"\s*:\s*"([^]*?)(?:"}$|$)/,
-    );
+function MessageFiles({
+  files,
+}: Readonly<{ files?: MessageFileView[] | null }>) {
+  if (!files?.length) return null;
+  return (
+    <div className="mb-2 flex flex-wrap justify-end gap-2">
+      {files.map((f, i) => (
+        <div
+          key={`${f.filename}-${i}`}
+          className="flex items-center gap-2.5 rounded-lg border bg-muted/40 px-3 py-2 text-xs"
+        >
+          <div className="flex size-7 shrink-0 items-center justify-center rounded-md border bg-background">
+            {f.uploading ? (
+              <Loader2 className="size-4 animate-spin text-muted-foreground" />
+            ) : (
+              <Paperclip className="size-4 text-muted-foreground" />
+            )}
+          </div>
+          <div className="flex min-w-0 max-w-[160px] flex-col">
+            <span className="truncate font-medium text-foreground">
+              {f.filename}
+            </span>
+            <span className="text-[10px] text-muted-foreground">
+              {[
+                f.uploading ? toolsContent.milvus.files.uploading : null,
+                f.size != null ? formatFileSize(f.size) : null,
+              ]
+                .filter(Boolean)
+                .join(" · ")}
+            </span>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
 
-    if (thinkingMatch) {
-      const cleanStr = (str: string) =>
-        str.replace(/\\n/g, "\n").replace(/\\"/g, '"').replace(/\\\\/g, "\\");
+function MessageSources({
+  label,
+  text,
+}: Readonly<{ label: string; text: string }>) {
+  // Function to transform links [text](url): if the URL is not http/https, keep only the text
+  const processedText = text.replace(
+    /\[([^\]]+)\]\(([^)]+)\)/g,
+    (match, linkText, url) => {
+      const isWebUrl = url.startsWith("http://") || url.startsWith("https://");
+      return isWebUrl ? match : linkText;
+    },
+  );
 
-      return {
-        displayThinking: cleanStr(thinkingMatch[1]),
-        displayContent: responseMatch ? cleanStr(responseMatch[1]) : "",
-      };
-    }
-  }
+  return (
+    <div className="relative my-4 overflow-hidden rounded-md border border-border">
+      {/* Header */}
+      <div className="flex items-center justify-start gap-[0.5em] border-b border-border bg-muted/50 px-4 py-1.5 text-xs text-muted-foreground">
+        <Bookmark className="size-3 shrink-0 text-primary" />
+        <span className="font-semibold text-xs uppercase tracking-wide">
+          {label}
+        </span>
+      </div>
 
-  return { displayThinking: null, displayContent: rawContent };
+      {/* Content */}
+      <div className="p-4 bg-[color-mix(in_oklab,var(--primary-950)_4%,transparent)]">
+        <div
+          className={cn(
+            "prose prose-sm max-w-none break-words text-xs dark:prose-invert",
+            "prose-p:my-0 prose-p:leading-relaxed prose-li:my-0",
+            "prose-a:font-medium prose-a:text-primary prose-a:underline-offset-2 hover:prose-a:text-primary/80",
+          )}
+        >
+          <ReactMarkdown
+            remarkPlugins={remarkPlugins}
+            rehypePlugins={rehypePlugins}
+            components={markdownComponents}
+          >
+            {normalizeLatexDelimiters(processedText)}
+          </ReactMarkdown>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function MessageBubble({
   role,
   content,
+  thinking,
   images,
+  files,
   model,
   agentName,
   createdAt,
@@ -168,7 +264,9 @@ function MessageBubble({
 }: Readonly<{
   role: string;
   content: string;
+  thinking?: string | null;
   images?: MessageImage[] | null;
+  files?: MessageFileView[] | null;
   model?: string | null;
   agentName?: string | null;
   createdAt: string;
@@ -177,11 +275,19 @@ function MessageBubble({
   const isUser = role === "user";
   const isAgent = !!agentName;
 
-  const { displayThinking, displayContent } = parseAgentContent(content);
+  const displayThinking = thinking || null;
+  const { body: displayContent, sources } = isUser
+    ? { body: content, sources: null }
+    : splitSources(content);
 
-  const isTyping = isStreaming && !displayContent && !displayThinking;
-  
-  const hasTextContent = !!(displayContent || displayThinking || isTyping);
+  const isTyping = isStreaming && !displayContent && !sources;
+
+  const hasTextContent = !!(
+    displayContent ||
+    sources ||
+    displayThinking ||
+    isTyping
+  );
 
   return (
     <div
@@ -192,6 +298,9 @@ function MessageBubble({
     >
       {/* Images */}
       {isUser && <MessageImages images={images} />}
+
+      {/* Files */}
+      {isUser && <MessageFiles files={files} />}
 
       <div className={cn("flex", isUser ? "justify-end" : "flex-col")}>
         {/* Model/Agent avatar */}
@@ -216,88 +325,108 @@ function MessageBubble({
             "relative max-w-[100%] rounded-md text-sm",
             hasTextContent ? "px-4 py-2.5" : "",
             isUser
-              ? hasTextContent ? "rounded-br-sm bg-primary-600 text-primary-foreground shadow-1 mt-1" : "" // Estilos de burbuja solo si hay texto
+              ? hasTextContent
+                ? "rounded-br-sm bg-primary-600 text-primary-foreground shadow-1 mt-1"
+                : ""
               : "text-foreground",
           )}
         >
           {/* Text */}
           {hasTextContent && (
-            isTyping ? (
-              <TypingDots />
-            ) : (
-              <div className="flex flex-col gap-2">
-                {/* Thinking expansion panel */}
-                {displayThinking && (
-                  <details className="group/details border-l-2 border-muted-foreground/30 pl-3 my-1">
-                    <summary className="flex items-center gap-1.5 cursor-pointer text-xs font-medium text-muted-foreground hover:text-foreground transition-colors list-none [&::-webkit-details-marker]:hidden">
-                      {chatsContent.chat.thinking}
-                      <ChevronDown className="h-3.5 w-3.5 transition-transform duration-200 group-open/details:rotate-180" />
-                    </summary>
-                    <div className="mt-2 text-muted-foreground/80 prose prose-sm max-w-none prose-p:my-1 text-xs">
-                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                        {displayThinking}
-                      </ReactMarkdown>
-                    </div>
-                  </details>
-                )}
-
-                {/* Response */}
-                {displayContent && (
-                  <div
-                    className={cn(
-                      "prose prose-sm max-w-none break-words",
-                      "prose-p:leading-relaxed prose-p:my-3",
-                      "prose-code:before:hidden prose-code:after:hidden",
-                      "prose-a:text-primary prose-a:underline-offset-2 hover:prose-a:text-primary/80",
-                      "prose-li:my-0.5",
-                      "prose-th:border prose-th:border-border prose-th:p-2 prose-th:bg-muted",
-                      "prose-td:border prose-td:border-border prose-td:p-2",
-                      isUser ? "prose-invert" : "dark:prose-invert",
-                    )}
-                  >
+            <div className="flex flex-col gap-2">
+              {/* Thinking expansion panel */}
+              {displayThinking && (
+                <details className="group/details border-l-2 border-muted-foreground/30 pl-3 my-1">
+                  <summary className="flex items-center gap-1.5 cursor-pointer text-xs font-medium text-muted-foreground hover:text-foreground transition-colors list-none [&::-webkit-details-marker]:hidden">
+                    {chatsContent.chat.thinking}
+                    <ChevronDown className="h-3.5 w-3.5 transition-transform duration-200 group-open/details:rotate-180" />
+                  </summary>
+                  <div className="mt-2 text-muted-foreground/80 prose prose-sm max-w-none prose-p:my-1 text-xs">
                     <ReactMarkdown
-                      remarkPlugins={[remarkGfm]}
-                      components={{
-                        code({ node, inline, className, children, ...props }: any) {
-                          const match = /language-(\w+)/.exec(className || "");
-                          // code block
-                          if (!inline && match) {
-                            return (
-                              <div className="relative mt-4 mb-4 rounded-md overflow-hidden border border-border">
-                                <div className="flex items-center justify-between px-4 py-1.5 bg-muted/50 text-xs text-muted-foreground border-b border-border">
-                                  <span>{match[1]}</span>
-                                </div>
-                                <SyntaxHighlighter
-                                  {...props}
-                                  style={atelierSeasideLight}
-                                  language={match[1]}
-                                  PreTag="div"
-                                  customStyle={{ margin: 0, padding: "1rem", background: "transparent" }}
-                                  className="text-[13px]"
-                                >
-                                  {String(children).replace(/\n$/, "")}
-                                </SyntaxHighlighter>
-                              </div>
-                            );
-                          }
-                          // code line
-                          return (
-                            <code
-                              {...props}
-                              className={cn("bg-muted/60 text-foreground px-1.5 py-0.5 rounded-md font-mono text-[0.85em] border border-border/50", className)}
-                            >
-                              {children}
-                            </code>
-                          );
-                        },
-                      }}
+                      remarkPlugins={remarkPlugins}
+                      rehypePlugins={rehypePlugins}
+                      components={markdownComponents}
                     >
-                      {displayContent}
+                      {normalizeLatexDelimiters(displayThinking)}
                     </ReactMarkdown>
                   </div>
-                )}
-              </div>
-            )
+                </details>
+              )}
+
+              {/* Typing indicator */}
+              {isTyping && <TypingDots />}
+
+              {/* Response */}
+              {displayContent && (
+                <div
+                  className={cn(
+                    "prose prose-sm max-w-none break-words",
+                    "prose-p:leading-relaxed prose-p:my-3",
+                    "prose-code:before:hidden prose-code:after:hidden",
+                    "prose-a:text-primary prose-a:underline-offset-2 hover:prose-a:text-primary/80",
+                    "prose-li:my-0.5",
+                    "prose-th:border prose-th:border-border prose-th:p-2 prose-th:bg-muted",
+                    "prose-td:border prose-td:border-border prose-td:p-2",
+                    isUser ? "prose-invert" : "dark:prose-invert",
+                  )}
+                >
+                  <ReactMarkdown
+                    remarkPlugins={remarkPlugins}
+                    rehypePlugins={rehypePlugins}
+                    components={{
+                      a: markdownComponents.a,
+                      code({
+                        className,
+                        children,
+                      }) {
+                        const match = /language-(\w+)/.exec(className || "");
+                        // code block
+                        if (match) {
+                          return (
+                            <div className="relative mt-4 mb-4 rounded-md overflow-hidden border border-border">
+                              <div className="flex items-center justify-between px-4 py-1.5 bg-muted/50 text-xs text-muted-foreground border-b border-border">
+                                <span>{match[1]}</span>
+                              </div>
+                              <SyntaxHighlighter
+                                style={atelierSeasideLight}
+                                language={match[1]}
+                                PreTag="div"
+                                customStyle={{
+                                  margin: 0,
+                                  padding: "1rem",
+                                  background: "transparent",
+                                }}
+                                className="text-[13px]"
+                              >
+                                {String(children).replace(/\n$/, "")}
+                              </SyntaxHighlighter>
+                            </div>
+                          );
+                        }
+                        // code line
+                        return (
+                          <code
+                            className={cn(
+                              "bg-muted/60 text-foreground px-1.5 py-0.5 rounded-md font-mono text-[0.85em] border border-border/50",
+                              className,
+                            )}
+                          >
+                            {children}
+                          </code>
+                        );
+                      },
+                    }}
+                  >
+                    {normalizeLatexDelimiters(displayContent)}
+                  </ReactMarkdown>
+                </div>
+              )}
+
+              {/* Sources */}
+              {sources && (
+                <MessageSources label={sources.label} text={sources.text} />
+              )}
+            </div>
           )}
 
           {/* Timestamp */}
@@ -326,6 +455,9 @@ export function ChatView({
   models: ModelInfo[];
   agents: AgentInfo[];
 }>) {
+  const getToken = useGetToken();
+  const api = useApi();
+
   const [messages, setMessages] = useState(initialMessages);
   const [input, setInput] = useState("");
   const lastAssistantMsg = initialMessages.findLast(
@@ -348,19 +480,27 @@ export function ChatView({
   const scrollRef = useRef<HTMLDivElement>(null);
   const hasCheckedPending = useRef(false);
 
-  // Images
-  const [images, setImages] = useState<ChatImageAttachment[]>([]);
+  // Images + files
   const selectedModel =
     mode === "model" ? models.find((m) => m.id === model) : undefined;
-  const imagesEnabled = mode === "model" && !!selectedModel?.supports_vision;
-  const imagesDisabledReason =
-    mode === "agent"
-      ? chatsContent.chat.imagesUnsupportedAgent
-      : chatsContent.chat.imagesUnsupportedModel;
+  const {
+    images,
+    files,
+    clear: clearAttachments,
+    containerProps: attachmentProps,
+  } = useChatAttachments(mode, selectedModel);
+  const [uploading, setUploading] = useState(false);
+  const { setMilvusDisabled } = useKnowledgeSelection();
+  const milvusUnsupported =
+    selectedModel?.supports_function_calling !== true || mode === "agent";
 
   useEffect(() => {
-    if (!imagesEnabled && images.length > 0) setImages([]);
-  }, [imagesEnabled]);
+    setMilvusDisabled(milvusUnsupported);
+    return () => setMilvusDisabled(false);
+  }, [milvusUnsupported, setMilvusDisabled]);
+
+  // Knowledge bases
+  const { selectedIds } = useKnowledgeSelection();
 
   useEffect(() => {
     scrollRef.current?.scrollTo({
@@ -375,6 +515,7 @@ export function ChatView({
       target: MessageTarget,
       assistantMsgId: string,
       images?: MessageImage[],
+      messageFiles?: MessageFile[],
     ) => {
       setSending(true);
       setStreamingId(assistantMsgId);
@@ -383,23 +524,28 @@ export function ChatView({
       const controller = new AbortController();
       abortRef.current = controller;
 
+      const targetModel =
+        "model_id" in target
+          ? models.find((m) => m.id === target.model_id)
+          : undefined;
+      const skipKnowledge = targetModel?.supports_function_calling === false;
+
       try {
-        const res = await fetch(`/api/chats/${chatId}/messages`, {
+        const token = await getToken();
+        const res = await apiRequest(`/chats/${chatId}/messages`, token, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             content,
             ...target,
             ...(images?.length ? { images } : {}),
+            ...(messageFiles?.length ? { files: messageFiles } : {}),
+            ...(selectedIds.size && !skipKnowledge
+              ? { collection_ids: Array.from(selectedIds) }
+              : {}),
           }),
           signal: controller.signal,
         });
-
-        if (!res.ok || !res.body) {
-          throw new Error(
-            await res.text().catch(() => apiContent.chat.processError),
-          );
-        }
+        if (!res.body) throw new Error(apiContent.chat.processError);
 
         for await (const { event, data } of parseSSEStream<
           DeltaEvent | DoneEvent | ErrorEvent
@@ -441,28 +587,75 @@ export function ChatView({
             );
           }
           if (event === "error") {
-            const errData = data as ErrorEvent & { message?: string };
+            const errData = data as ErrorEvent;
             setMessages((prev) => prev.filter((m) => m.id !== assistantMsgId));
             setError({
               title: apiContent.chat.responseError,
-              message: errData?.message ?? apiContent.chat.modelError,
+              message: errData.detail || apiContent.chat.modelError,
               content,
               target,
               images,
+              files: messageFiles,
             });
           }
         }
-      } catch (err) {
-        if ((err as Error).name === "AbortError") {
+      } catch (err: unknown) {
+        if (err instanceof Error && err.name === "AbortError") {
           // when user stops the conversation manually
         } else {
           setMessages((prev) => prev.filter((m) => m.id !== assistantMsgId));
+
+          const status = err instanceof ApiError ? err.status : undefined;
+          const serverMessage = err instanceof Error ? err.message : undefined;
+
+          let title: string = apiContent.chat.connectionError;
+          let message: string = apiContent.chat.checkConnection;
+
+          if (status) {
+            switch (status) {
+              case 400:
+                title = apiContent.general.incorrect.title;
+                message = serverMessage || apiContent.general.incorrect.desc;
+                break;
+              case 401:
+                title = apiContent.general.unauthorized.title;
+                message = apiContent.general.unauthorized.desc;
+                break;
+              case 403:
+                title = apiContent.general.forbidden.title;
+                message = apiContent.general.forbidden.desc;
+                break;
+              case 404:
+                title = apiContent.general.unfound.title;
+                message = serverMessage || apiContent.general.unfound.desc;
+                break;
+              case 429:
+                title = apiContent.general.requests.title;
+                message = apiContent.general.requests.desc;
+                break;
+              case 500:
+              case 502:
+              case 503:
+                title = apiContent.general.server.title + ` (${status})`;
+                message = serverMessage || apiContent.general.server.desc;
+                break;
+              default:
+                title = apiContent.general.default.title + ` (${status})`;
+                message = serverMessage || apiContent.chat.checkConnection;
+                break;
+            }
+          } else if (serverMessage) {
+            // Si no hay status HTTP pero el error tiene un mensaje propio
+            message = serverMessage;
+          }
+
           setError({
-            title: apiContent.chat.connectionError,
-            message: apiContent.chat.checkConnection,
+            title,
+            message,
             content,
             target,
             images,
+            files: messageFiles,
           });
         }
       } finally {
@@ -471,7 +664,7 @@ export function ChatView({
         abortRef.current = null;
       }
     },
-    [chatId],
+    [chatId, getToken, selectedIds, models],
   );
 
   const sendMessage = useCallback(
@@ -479,9 +672,9 @@ export function ChatView({
       content: string,
       target: MessageTarget,
       images: ChatImageAttachment[] = [],
-    ) => {
+      filesToUpload: File[] = [],
+    ): Promise<boolean> => {
       const userMsgId = tempId();
-      const assistantMsgId = tempId();
       const now = new Date().toISOString();
       const imagePayload = images.length ? toImagePayload(images) : undefined;
 
@@ -494,8 +687,38 @@ export function ChatView({
           model_id: null,
           agent_id: null,
           images: imagePayload ?? null,
+          files: filesToUpload.length
+            ? filesToUpload.map(toUploadingFile)
+            : null,
           created_at: now,
         },
+      ]);
+
+      // Create the conversation collection (if it does not exist) and upload the files
+      let uploaded: MessageFile[] = [];
+      if (filesToUpload.length) {
+        setUploading(true);
+        try {
+          uploaded = await uploadChatFiles(api, chatId, filesToUpload);
+        } catch (err) {
+          setMessages((prev) => prev.filter((m) => m.id !== userMsgId));
+          toast.error(
+            err instanceof Error
+              ? err.message
+              : toolsContent.milvus.toasts.uploadError,
+          );
+          return false;
+        } finally {
+          setUploading(false);
+        }
+        setMessages((prev) =>
+          prev.map((m) => (m.id === userMsgId ? { ...m, files: uploaded } : m)),
+        );
+      }
+
+      const assistantMsgId = tempId();
+      setMessages((prev) => [
+        ...prev,
         {
           id: assistantMsgId,
           role: "assistant",
@@ -506,14 +729,25 @@ export function ChatView({
         },
       ]);
 
-      await runStream(content, target, assistantMsgId, imagePayload);
+      await runStream(content, target, assistantMsgId, imagePayload, uploaded);
+      return true;
     },
-    [runStream],
+    [chatId, runStream, api],
   );
+
+  function restoreDraft(
+    content: string,
+    draftImages: ChatImageAttachment[],
+    draftFiles: File[],
+  ) {
+    setInput(content);
+    attachmentProps.onImagesChange(draftImages);
+    attachmentProps.onFilesChange(draftFiles);
+  }
 
   function handleRetry() {
     if (!error) return;
-    const { content, target, images } = error;
+    const { content, target, images, files } = error;
     setError(null);
 
     const assistantMsgId = tempId();
@@ -530,7 +764,7 @@ export function ChatView({
       },
     ]);
 
-    runStream(content, target, assistantMsgId, images);
+    runStream(content, target, assistantMsgId, images, files);
   }
 
   useEffect(() => {
@@ -539,27 +773,55 @@ export function ChatView({
     const pending = consumePendingMessage(chatId);
     if (!pending) return;
 
-    if (pending.target.model_id) {
-      setMode("model");
-      setModel(pending.target.model_id);
-    } else if (pending.target.agent_id) {
-      setMode("agent");
-      setAgent(pending.target.agent_id);
-    }
+    startTransition(() => {
+      if (pending.target.model_id) {
+        setMode("model");
+        setModel(pending.target.model_id);
+      } else if (pending.target.agent_id) {
+        setMode("agent");
+        setAgent(pending.target.agent_id);
+      }
+    });
 
-    sendMessage(pending.content, pending.target, pending.images ?? []);
+    const pendingImages = pending.images ?? [];
+    const pendingFiles = pending.files ?? [];
+    startTransition(() => {
+      void sendMessage(
+        pending.content,
+        pending.target,
+        pendingImages,
+        pendingFiles,
+      ).then((ok) => {
+        if (!ok) restoreDraft(pending.content, pendingImages, pendingFiles);
+      });
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [chatId]);
 
   async function handleSend() {
     const content = input.trim();
-    if ((!content && !images) || sending || error) return;
-    setInput("");
+    if (
+      (!content && !images.length && !files.length) ||
+      sending ||
+      uploading ||
+      error
+    )
+      return;
+
     const target: MessageTarget =
       mode === "agent" ? { agent_id: agent } : { model_id: model };
     const attachedImages = images;
-    setImages([]);
-    await sendMessage(content, target, attachedImages);
+    const attachedFiles = files;
+
+    setInput("");
+    clearAttachments();
+    const ok = await sendMessage(
+      content,
+      target,
+      attachedImages,
+      attachedFiles,
+    );
+    if (!ok) restoreDraft(content, attachedImages, attachedFiles);
   }
 
   function handleStop() {
@@ -567,7 +829,7 @@ export function ChatView({
   }
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex min-h-0 flex-1 flex-col">
       <div className="flex items-center justify-between border-b px-4 py-3 md:px-8 gap-2">
         <div className="flex items-center gap-2 pr-[0.5em]">
           <SidebarTrigger />
@@ -594,7 +856,9 @@ export function ChatView({
             key={m.id}
             role={m.role}
             content={m.content}
+            thinking={m.thinking}
             images={m.images}
+            files={m.files}
             model={m.model_id}
             agentName={m.agent_id ? agentsById.get(m.agent_id) : null}
             createdAt={m.created_at}
@@ -634,10 +898,8 @@ export function ChatView({
         blocked={!!error}
         hint={error ? chatsContent.errors.fixConnection : null}
         hintTone="error"
-        imagesEnabled={imagesEnabled}
-        imagesDisabledReason={imagesDisabledReason}
-        images={images}
-        onImagesChange={setImages}
+        {...attachmentProps}
+        disabled={uploading}
         maxTotalBytes={15_000_000} // 15 MB - if this variable changes, update the corresponding API variable
       />
     </div>

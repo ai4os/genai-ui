@@ -25,11 +25,25 @@ export const chatsContent = {
     retry: "Retry",
     blocked: "Messaging blocked",
     thinking: "Thinking",
-    attachImage: "Attach image",
+    attachImage: "Add image",
     removeImage: "Remove image",
-    imagesUnsupportedModel: "This model doesn't support image input",
-    imagesUnsupportedAgent: "Agents don't support image input yet",
+    imagesUnsupportedModel: "Model does not support images",
+    imagesUnsupportedAgent: "Images are not supported by agents",
     imagesTooLarge: "Total image size can't exceed {max}",
+    attachFile: "Add file",
+    removeFile: "Remove file",
+    filesUnsupportedModel: "Model does not support file attachments",
+    filesUnsupportedAgent: "Files are not supported by agents",
+    fileTooLarge: "Total file size can't exceed {max}",
+    deleteDialog: {
+      title: "Delete conversation",
+      description:
+        "The conversation will be deleted along with the attached documents. This action cannot be undone.",
+    },
+    toasts: {
+      deleteSuccess: "The chat has been deleted successfully",
+      deleteError: "The chat could not be deleted",
+    },
   },
   selector: {
     maxInputTokens: "Max input tokens",
@@ -40,6 +54,14 @@ export const chatsContent = {
     inputCost: "Input cost",
     outputCost: "Output cost",
     textOnly: "Text only",
+    url: "URL",
+    devStatus: "Status",
+    devStatuses: {
+      alpha: "Alpha",
+      beta: "Beta",
+      prod: "Production",
+      unknown: "Unknown",
+    },
     capabilities: {
       supports_vision: "Vision",
       supports_reasoning: "Reasoning",

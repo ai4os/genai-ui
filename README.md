@@ -1,88 +1,75 @@
-# genai-ui
+# React + TypeScript + Vite
 
-[![Conventional Commits](https://img.shields.io/badge/Conventional%20Commits-1.0.0-%23FE5196?logo=conventionalcommits&logoColor=white)](https://conventionalcommits.org)
-[![ESLint](https://img.shields.io/badge/lint-eslint-4B32C3?logo=eslint&logoColor=white)](https://eslint.org)
-[![GitHub license](https://img.shields.io/github/license/ai4os/genai-ui.svg)](https://github.com/ai4os/genai-ui/blob/master/LICENSE)
-[![GitHub release](https://img.shields.io/github/release/ai4os/genai-ui.svg)](https://github.com/ai4os/genai-ui/releases)
+This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
-> ⚠️ **Warning**
->
-> This repository is under active development. Some features may be incomplete or not fully functional.
+Currently, two official plugins are available:
 
-Web app that provides a stable frontend for chat management, AI agents, MCP tools, databases and other AI services.
+- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
+- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
 
-## Architecture
+## React Compiler
 
-`genai-ui` is one piece of a larger system:
+The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
 
-- **Frontend** (this repo) — Next.js chat interface: chat management, streaming responses, model selection.
-- **Backend** ([`genai-api`](https://github.com/ai4os/genai-api)) — FastAPI backend: chats, messages, model selection. This UI consumes it exclusively through its own server (BFF pattern — see below), never directly from the browser.
-- **Keycloak** — authentication provider. Realm `ai4eosc`, client `genai-ui` (confidential, with secret). The UI never talks to Keycloak from the browser either; all token exchange happens server-side.
+## Expanding the ESLint configuration
 
-This frontend follows the **BFF (Backend for Frontend)** pattern: the browser never talks directly to `genai-api` nor to Keycloak. All communication goes through the Next.js server:
+If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
 
-- **Reads** → Server Components call straight into `lib/api/`.
-- **Writes** → Server Actions or dedicated Route Handlers, never a client-side `fetch` against `genai-api`.
-- Assistant responses arrive **streamed (SSE)**, relayed by a Route Handler that acts as a transparent proxy between the browser and `genai-api`.
+```js
+export default defineConfig([
+  globalIgnores(['dist']),
+  {
+    files: ['**/*.{ts,tsx}'],
+    extends: [
+      // Other configs...
 
-## Requirements
+      // Remove tseslint.configs.recommended and replace with this
+      tseslint.configs.recommendedTypeChecked,
+      // Alternatively, use this for stricter rules
+      tseslint.configs.strictTypeChecked,
+      // Optionally, add this for stylistic rules
+      tseslint.configs.stylisticTypeChecked,
 
-- Node.js 20+
-- pnpm 9+ (`corepack enable` if not already installed)
-- Access to a Keycloak realm with a client configured
-- A running instance of [`genai-api`](https://github.com/ai4os/genai-api) (local or remote), with its own database already migrated
+      // Other configs...
+    ],
+    languageOptions: {
+      parserOptions: {
+        project: ['./tsconfig.node.json', './tsconfig.app.json'],
+        tsconfigRootDir: import.meta.dirname,
+      },
+      // other options...
+    },
+  },
+])
 
-
-## Configuration
-
-The app reads its configuration from environment variables, loaded from `.env.local`.
-
-```bash
-# Base URL of the backend API (genai-api)
-API_URL=http://localhost:8000
-
-# Keycloak provider
-AUTH_KEYCLOAK_ID=<your-client-id>
-AUTH_KEYCLOAK_SECRET=<your-client-secret>
-AUTH_KEYCLOAK_ISSUER=https://<your-keycloak-host>/realms/<realm>
 ```
 
+You can also install [eslint-plugin-react-x](https://npmx.dev/package/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://npmx.dev/package/eslint-plugin-react-dom) for React-specific lint rules:
 
-## Local deployment
+```js
+// eslint.config.js
+import reactX from 'eslint-plugin-react-x'
+import reactDom from 'eslint-plugin-react-dom'
 
-1. **Install the dependencies**
+export default defineConfig([
+  globalIgnores(['dist']),
+  {
+    files: ['**/*.{ts,tsx}'],
+    extends: [
+      // Other configs...
+      // Enable lint rules for React
+      reactX.configs['recommended-typescript'],
+      // Enable lint rules for React DOM
+      reactDom.configs.recommended,
+    ],
+    languageOptions: {
+      parserOptions: {
+        project: ['./tsconfig.node.json', './tsconfig.app.json'],
+        tsconfigRootDir: import.meta.dirname,
+      },
+      // other options...
+    },
+  },
+])
 
-   ```bash
-   pnpm install
-   ```
-
-3. **Set up your environment variables**
-
-   Copy the block described in [Configuration](#configuration) into a `.env.local` file and fill in the values.
-
-4. **Run the app**
-
-   ```bash
-   pnpm dev
-   ```
-
-   The app will be available at `http://localhost:3000`.
-
-
-## Usage
-
-Available scripts:
-
-```bash
-pnpm dev      # development server (Turbopack)
-pnpm build    # production build
-pnpm start    # run the production build
-pnpm lint     # ESLint
 ```
-
-
-## How to contribute
-
-The repository is formatted and linted with [ESLint](https://eslint.org).
-Commit messages follow [Conventional Commits](https://conventionalcommits.org).
-

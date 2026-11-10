@@ -7,7 +7,6 @@ export const landingContent = {
   footer: {
     disclaimer: "The GenAI web app is a service provided by CSIC, co-funded by",
     partners: [
-      { label: "AI4EOSC", href: "https://ai4eosc.eu/" },
       { label: "EOSC-ARENA", href: "https://arena.ai4eosc.eu/" },
     ],
   },
