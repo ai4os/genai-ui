@@ -15,7 +15,7 @@ export type MessageRole = "system" | "user" | "assistant" | "tool";
 
 export type MessageImage = {
   mime_type: string;
-  data: string; // base64 sin prefijo "data:...;base64,"
+  data: string; // base64 sin prefijo
 };
 
 export type MessageFile = {

@@ -1,16 +1,16 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
-import { RequireAuth } from "@/components/require-auth";
-import { ChatLayout } from "./pages/chat-layout";
-import { ChatPage } from "./pages/ChatPage";
-import { NewChatPage } from "./pages/NewChatPage";
-import { Landing } from "./pages/landing";
+import { RequireAuth } from "@/features/auth/require-auth";
+import { ChatLayout } from "./layouts/chat-layout";
+import { ChatPage } from "./pages/chat-page";
+import { NewChatPage } from "./pages/new-chat-page";
+import { LandingPage } from "./pages/landing-page";
 
 export default function App() {
   return (
     <BrowserRouter>
       <Routes>
         {/* Public route */}
-        <Route path="/" element={<Landing />} />
+        <Route path="/" element={<LandingPage />} />
 
         {/* Protected routes */}
         <Route element={<RequireAuth />}>

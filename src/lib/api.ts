@@ -8,7 +8,7 @@ export class ApiError extends Error {
   }
 }
 
-// Hace la petición y, si la API responde con error, lanza ApiError con el `detail` de FastAPI
+// Makes the request and, if the API responds with an error, throws ApiError with FastAPI's `detail`
 export async function apiRequest(path: string, token: string, init: RequestInit = {}): Promise<Response> {
   const headers = new Headers(init.headers)
   headers.set("Authorization", `Bearer ${token}`)
@@ -22,7 +22,7 @@ export async function apiRequest(path: string, token: string, init: RequestInit 
       const body = await res.json()
       detail = typeof body.detail === "string" ? body.detail : JSON.stringify(body.detail ?? body)
     } catch {
-      // el cuerpo no era JSON
+      // when the body is not a json
     }
     throw new ApiError(res.status, detail)
   }
