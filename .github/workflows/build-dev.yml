@@ -36,3 +36,7 @@ jobs:
           tags: |
             ${{ env.HARBOR_URL }}/ai4os/${{ env.IMAGE_NAME }}:v${{ steps.version.outputs.version }}-dev
             ${{ env.HARBOR_URL }}/ai4os/${{ env.IMAGE_NAME }}:dev-latest
+          build-args: |
+            VITE_OIDC_AUTHORITY=https://login.cloud.ai4eosc.eu/realms/ai4eosc
+            VITE_OIDC_CLIENT_ID=genai-ui
+            VITE_API_URL=https://genai-api.dev.ai4eosc.eu
