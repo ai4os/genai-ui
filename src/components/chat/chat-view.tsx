@@ -26,7 +26,7 @@ import { atelierSeasideLight } from "react-syntax-highlighter/dist/esm/styles/hl
 import { v4 as uuidv4 } from "uuid";
 import { useKnowledgeSelection } from "./knowledge-selection";
 import { toast } from "sonner";
-import { useChatAttachments } from "./use-chat-attatchments";
+import { useChatAttachments } from "./use-chat-attachments";
 import { splitSources } from "@/lib/chat-sources";
 import { toolsContent } from "@/content/tools";
 import type {

@@ -5,7 +5,7 @@ import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
 import { ChatContainer } from "./chat-container";
 import { toast } from "sonner";
-import { useChatAttachments } from "./use-chat-attatchments";
+import { useChatAttachments } from "./use-chat-attachments";
 import { useKnowledgeSelection } from "./knowledge-selection";
 import { Button } from "../ui/button";
 import type { ModelInfo, AgentInfo, MessageTarget } from "@/lib/types";
@@ -13,7 +13,7 @@ import { useNavigate } from "react-router-dom"
 import { useCreateChat } from "@/lib/queries"
 import { setPendingMessage } from "@/lib/pending-message";
 
-export function StartChatFormClient({
+export function NewChatView({
   models,
   agents,
   initialModelId,

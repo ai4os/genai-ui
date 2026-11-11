@@ -21,17 +21,17 @@ export interface CreateCollectionData {
   description?: string;
 }
 
-interface CreateCollectionModalProps {
+interface CreateCollectionDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onCreate: (data: CreateCollectionData) => void | Promise<void>;
 }
 
-export function CreateCollectionModal({
+export function CreateCollectionDialog({
   open,
   onOpenChange,
   onCreate,
-}: Readonly<CreateCollectionModalProps>) {
+}: Readonly<CreateCollectionDialogProps>) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);

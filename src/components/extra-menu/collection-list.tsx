@@ -5,10 +5,10 @@ import { toolsContent } from "@/content/tools";
 import { useKnowledgeSelection } from "../chat/knowledge-selection";
 import { Button } from "@/components/ui/button";
 import {
-  CreateCollectionModal,
+  CreateCollectionDialog,
   type CreateCollectionData,
-} from "./create-collection-modal";
-import { CollectionDocsModal } from "./collection-documents-modal";
+} from "./create-collection-dialog";
+import { CollectionDocsDialog } from "./collection-documents-dialog";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 import type { Collection, CollectionCreate } from "@/lib/types";
 import { useCreateCollection, useDeleteCollection } from "@/lib/queries";
@@ -79,7 +79,7 @@ function CollectionCard({
   );
 }
 
-export function MilvusGroup({
+export function CollectionList({
   collections,
   onCollectionCreated,
 }: Readonly<{
@@ -182,13 +182,13 @@ export function MilvusGroup({
           + {toolsContent.milvus.collections.create}
         </Button>
 
-        <CreateCollectionModal
+        <CreateCollectionDialog
           open={isCreateOpen}
           onOpenChange={setIsCreateOpen}
           onCreate={handleCreateCollection}
         />
 
-        <CollectionDocsModal
+        <CollectionDocsDialog
           collection={filesCollection}
           onOpenChange={(open) => {
             if (!open) setFilesCollection(null);

@@ -1,9 +1,9 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
-import { RequireAuth } from "@/components/RequireAuth";
-import { ChatLayout } from "./pages/ChatLayout";
+import { RequireAuth } from "@/components/require-auth";
+import { ChatLayout } from "./pages/chat-layout";
 import { ChatPage } from "./pages/ChatPage";
 import { NewChatPage } from "./pages/NewChatPage";
-import { Landing } from "./pages/Landing";
+import { Landing } from "./pages/landing";
 
 export default function App() {
   return (

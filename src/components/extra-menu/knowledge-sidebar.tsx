@@ -1,9 +1,9 @@
 import { toolsContent } from "@/content/tools"
 import { useCollections } from "@/lib/queries"
 import { Skeleton } from "@/components/ui/skeleton"
-import { MilvusGroup } from "./milvus-group"
+import { CollectionList } from "./collection-list"
 
-export function RightSidebar() {
+export function KnowledgeSidebar() {
   const { data: collections, isPending, error } = useCollections()
 
   return (
@@ -11,7 +11,7 @@ export function RightSidebar() {
       <p className="mb-4 text-sm font-semibold">{toolsContent.title}</p>
       {isPending && <Skeleton className="h-10 w-full" />}
       {error && <p className="text-sm text-error">{error.message}</p>}
-      {collections && <MilvusGroup collections={collections} />}
+      {collections && <CollectionList collections={collections} />}
     </aside>
   )
 }

@@ -33,7 +33,7 @@ const CACHE_TTL_MS = 5 * 60 * 1000;
 
 type CachedPage = { items: string[]; total: number; at: number };
 
-interface CollectionFilesModalProps {
+interface CollectionFilesDialogProps {
   collection: Collection | null;
   onOpenChange: (open: boolean) => void;
   /**
@@ -43,11 +43,11 @@ interface CollectionFilesModalProps {
   onDeleteCollection: (collectionId: string) => Promise<void>;
 }
 
-export function CollectionDocsModal({
+export function CollectionDocsDialog({
   collection,
   onOpenChange,
   onDeleteCollection,
-}: Readonly<CollectionFilesModalProps>) {
+}: Readonly<CollectionFilesDialogProps>) {
   const api = useApi();
 
   // Files of the current page

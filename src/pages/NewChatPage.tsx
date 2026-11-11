@@ -1,5 +1,5 @@
 import { useSearchParams } from "react-router-dom"
-import { StartChatFormClient } from "@/components/chat/start-chat-form-client"
+import { NewChatView } from "@/components/chat/new-chat-view"
 import { useAgents, useModels } from "@/lib/queries"
 
 export function NewChatPage() {
@@ -12,7 +12,7 @@ export function NewChatPage() {
     return <p className="p-4">Error: {(models.error ?? agents.error)?.message}</p>
   }
   return (
-    <StartChatFormClient
+    <NewChatView
       models={models.data}
       agents={agents.data}
       initialModelId={params.get("model") ?? undefined}

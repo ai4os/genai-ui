@@ -5,7 +5,7 @@ import { ChatListSkeleton } from "@/components/chat/chat-list-skeleton";
 import { KnowledgeSelectionProvider } from "@/components/chat/knowledge-selection-context";
 import { useChats } from "@/lib/queries";
 import { UserMenu } from "@/components/top-menu/user-menu";
-import { RightSidebar } from "@/components/extra-menu/right-sidebar";
+import { KnowledgeSidebar } from "@/components/extra-menu/knowledge-sidebar";
 
 export function ChatLayout() {
   const { data: chats, isPending } = useChats();
@@ -26,7 +26,7 @@ export function ChatLayout() {
             <Outlet />
           </div>
         </SidebarInset>
-        <RightSidebar />
+        <KnowledgeSidebar />
       </SidebarProvider>
     </KnowledgeSelectionProvider>
   );
