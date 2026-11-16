@@ -2,7 +2,7 @@
 
 [![Conventional Commits](https://img.shields.io/badge/Conventional%20Commits-1.0.0-%23FE5196?logo=conventionalcommits&logoColor=white)](https://conventionalcommits.org)
 [![ESLint](https://img.shields.io/badge/lint-eslint-4B32C3?logo=eslint&logoColor=white)](https://eslint.org)
-[![GitHub license](https://img.shields.io/github/license/ai4os/genai-ui.svg)](https://github.com/ai4os/genai-ui/blob/master/LICENSE)
+[![GitHub license](https://img.shields.io/github/license/ai4os/genai-ui.svg)](https://github.com/ai4os/genai-ui/blob/main/LICENSE)
 [![GitHub release](https://img.shields.io/github/release/ai4os/genai-ui.svg)](https://github.com/ai4os/genai-ui/releases)
 
 Web app that provides a stable frontend for chat management, AI agents, MCP tools, databases and other AI services.

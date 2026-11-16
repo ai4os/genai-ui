@@ -3,7 +3,7 @@ name: docker-dev
 on:
   push:
     branches:
-      - develop
+      - dev
 
 env:
   HARBOR_URL: ${{ secrets.HARBOR_URL }}
@@ -15,9 +15,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Read current version
+      - name: Fetch main
+        run: git fetch origin main
+
+      - name: Read official version
         id: version
-        run: echo "version=$(jq -r '."."' .release-please-manifest.json)" >> "$GITHUB_OUTPUT"
+        run: |
+          VERSION=$(git show origin/main:.release-please-manifest.json | jq -r '."."')
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Log in to Harbor
         uses: docker/login-action@v3
@@ -40,3 +45,21 @@ jobs:
             VITE_OIDC_AUTHORITY=https://login.cloud.ai4eosc.eu/realms/ai4eosc
             VITE_OIDC_CLIENT_ID=genai-ui
             VITE_API_URL=https://genai-api.dev.ai4eosc.eu
+
+      - name: Deploy UI DEV
+        env:
+          WEBHOOK_URL: https://webhooks.cloud.ai4eosc.eu/hooks/deploy-ui-dev
+          WEBHOOK_SECRET: ${{ secrets.WEBHOOK_SECRET }}
+          TAG: v${{ steps.version.outputs.version }}-dev
+        run: |
+          PAYLOAD=$(jq -cn --arg tag "$TAG" '{tag: $tag}')
+          HASH=$(printf '%s' "$PAYLOAD" \
+            | openssl dgst -sha256 -hmac "$WEBHOOK_SECRET" \
+            | awk '{print $NF}')
+
+          curl --fail-with-body --silent --show-error \
+            --retry 3 --retry-delay 5 \
+            -X POST "$WEBHOOK_URL" \
+            -H 'Content-Type: application/json' \
+            -H "X-Hub-Signature-256: sha256=$HASH" \
+            -d "$PAYLOAD"
