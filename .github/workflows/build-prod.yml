@@ -1,13 +1,14 @@
+
+name: release-please
+
 on:
   push:
     branches:
-      - master
+      - main
 
 permissions:
   contents: write
   pull-requests: write
-
-name: release-please
 
 jobs:
   release-please:
@@ -26,7 +27,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: tag major and minor versions
+      - name: Tag major and minor versions
         if: ${{ steps.release.outputs.release_created }}
         run: |
           git config user.name github-actions[bot]
@@ -66,3 +67,25 @@ jobs:
           tags: |
             ${{ secrets.HARBOR_URL }}/ai4os/genai-ui:${{ needs.release-please.outputs.tag_name }}-prod
             ${{ secrets.HARBOR_URL }}/ai4os/genai-ui:latest
+          build-args: |
+            VITE_OIDC_AUTHORITY=https://login.cloud.ai4eosc.eu/realms/ai4eosc
+            VITE_OIDC_CLIENT_ID=genai-ui
+            VITE_API_URL=https://genai-api.cloud.ai4eosc.eu
+
+      - name: Deploy UI PROD
+        env:
+          WEBHOOK_URL: https://webhooks.cloud.ai4eosc.eu/hooks/deploy-ui-prod
+          WEBHOOK_SECRET: ${{ secrets.WEBHOOK_SECRET }}
+          TAG: ${{ needs.release-please.outputs.tag_name }}-prod
+        run: |
+          PAYLOAD=$(jq -cn --arg tag "$TAG" '{tag: $tag}')
+          HASH=$(printf '%s' "$PAYLOAD" \
+            | openssl dgst -sha256 -hmac "$WEBHOOK_SECRET" \
+            | awk '{print $NF}')
+
+          curl --fail-with-body --silent --show-error \
+            --retry 3 --retry-delay 5 \
+            -X POST "$WEBHOOK_URL" \
+            -H 'Content-Type: application/json' \
+            -H "X-Hub-Signature-256: sha256=$HASH" \
+            -d "$PAYLOAD"

@@ -1,31 +1,18 @@
-# ---- deps ----
-FROM node:20-alpine AS deps
+# ---- build ----
+FROM node:24-alpine AS build
 WORKDIR /app
-RUN corepack enable && corepack prepare pnpm@9.12.0 --activate
+RUN corepack enable
 COPY package.json pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile
-
-# ---- build ----
-FROM node:20-alpine AS builder
-WORKDIR /app
-RUN corepack enable && corepack prepare pnpm@9.12.0 --activate
-COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+
+ARG VITE_OIDC_AUTHORITY
+ARG VITE_OIDC_CLIENT_ID
+ARG VITE_API_URL
 RUN pnpm build
 
 # ---- runtime ----
-FROM node:20-alpine AS runner
-WORKDIR /app
-ENV NODE_ENV=production
-
-RUN addgroup --system nodejs && adduser --system --ingroup nodejs nextjs
-
-COPY --from=builder /app/public ./public
-COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
-
-USER nextjs
+FROM nginxinc/nginx-unprivileged:alpine
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY --from=build /app/dist /usr/share/nginx/html
 EXPOSE 3000
-ENV PORT=3000
-
-CMD ["node", "server.js"]
