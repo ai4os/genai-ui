@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Check, Globe, Lock } from "lucide-react";
+import { Check, ChevronDownIcon, Globe, Lock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toolsContent } from "@/content/tools";
 import { Button } from "@/components/ui/button";
@@ -8,10 +8,19 @@ import {
   type CreateCollectionData,
 } from "./dialogs/create-collection-dialog";
 import { CollectionDocsDialog } from "./dialogs/collection-documents-dialog";
-import { Tooltip, TooltipContent, TooltipTrigger } from "../../components/ui/tooltip";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "../../components/ui/tooltip";
 import type { Collection, CollectionCreate } from "@/lib/types";
 import { useCreateCollection, useDeleteCollection } from "./api/queries";
 import { useKnowledgeSelection } from "./use-knowledge-selection";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 
 function getCollectionId(collection: Collection) {
   return collection.id;
@@ -38,24 +47,13 @@ function CollectionCard({
           : "hover:border-primary-400",
       )}
     >
-      <Tooltip>
-        <TooltipTrigger
-          render={
-            <span className="flex size-6 shrink-0 items-center justify-center rounded-md bg-primary-50 text-primary-700">
-              {collection.scope === "public" ? (
-                <Globe className="size-3.5" />
-              ) : (
-                <Lock className="size-3.5" />
-              )}
-            </span>
-          }
-        />
-        <TooltipContent>
-          {collection.scope === "public"
-            ? toolsContent.milvus.collections.public
-            : toolsContent.milvus.collections.private}
-        </TooltipContent>
-      </Tooltip>
+      <span className="flex size-6 shrink-0 items-center justify-center rounded-md bg-primary-50 text-primary-700">
+        {collection.scope === "public" ? (
+          <Globe className="size-3.5" />
+        ) : (
+          <Lock className="size-3.5" />
+        )}
+      </span>
 
       <span className="flex-1 truncate">{collection.name}</span>
 
@@ -143,35 +141,59 @@ export function CollectionList({
           )}
         </div>
 
-        {publicCollections.map((c) => {
-          const id = getCollectionId(c);
-          return (
-            <CollectionCard
-              key={id}
-              collection={c}
-              selected={selectedIds.has(id)}
-              onToggle={() => toggle(id)}
-              onOpenFiles={() => setFilesCollection(c)}
-            />
-          );
-        })}
+        <Collapsible className="rounded-md data-open:bg-muted">
+          <CollapsibleTrigger
+            render={
+              <Button variant="ghost" className="w-full">
+                {toolsContent.milvus.collections.public}
+                <ChevronDownIcon className="ml-auto group-data-panel-open/button:rotate-180" />
+              </Button>
+            }
+          />
+          <CollapsibleContent className="flex flex-col items-start gap-2 p-2.5 pt-0 text-sm">
+            {publicCollections.map((c) => {
+              const id = getCollectionId(c);
+              return (
+                <CollectionCard
+                  key={id}
+                  collection={c}
+                  selected={selectedIds.has(id)}
+                  onToggle={() => toggle(id)}
+                  onOpenFiles={() => setFilesCollection(c)}
+                />
+              );
+            })}
+          </CollapsibleContent>
+        </Collapsible>
 
         {publicCollections.length > 0 && privateCollections.length > 0 && (
           <hr className="my-3 border-border" />
         )}
 
-        {privateCollections.map((c) => {
-          const id = getCollectionId(c);
-          return (
-            <CollectionCard
-              key={id}
-              collection={c}
-              selected={selectedIds.has(id)}
-              onToggle={() => toggle(id)}
-              onOpenFiles={() => setFilesCollection(c)}
-            />
-          );
-        })}
+        <Collapsible className="rounded-md data-open:bg-muted">
+          <CollapsibleTrigger
+            render={
+              <Button variant="ghost" className="w-full">
+                {toolsContent.milvus.collections.private}
+                <ChevronDownIcon className="ml-auto group-data-panel-open/button:rotate-180" />
+              </Button>
+            }
+          />
+          <CollapsibleContent className="flex flex-col items-start gap-2 p-2.5 pt-0 text-sm">
+            {privateCollections.map((c) => {
+              const id = getCollectionId(c);
+              return (
+                <CollectionCard
+                  key={id}
+                  collection={c}
+                  selected={selectedIds.has(id)}
+                  onToggle={() => toggle(id)}
+                  onOpenFiles={() => setFilesCollection(c)}
+                />
+              );
+            })}
+          </CollapsibleContent>
+        </Collapsible>
 
         <Button
           type="button"

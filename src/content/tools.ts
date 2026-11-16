@@ -13,8 +13,8 @@ export const toolsContent = {
     unsupportedByModel:
       "The selected model does not support tools, so it cannot use knowledge bases.",
     collections: {
-      public: "Public collection",
-      private: "Private collection",
+      public: "Public collections",
+      private: "Private collections",
       create: "Create collection",
       createDesc: "Add a new collection to organise your knowledge.",
       delete: "Delete collection",
