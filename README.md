@@ -2,87 +2,120 @@
 
 [![Conventional Commits](https://img.shields.io/badge/Conventional%20Commits-1.0.0-%23FE5196?logo=conventionalcommits&logoColor=white)](https://conventionalcommits.org)
 [![ESLint](https://img.shields.io/badge/lint-eslint-4B32C3?logo=eslint&logoColor=white)](https://eslint.org)
-[![GitHub license](https://img.shields.io/github/license/ai4os/genai-ui.svg)](https://github.com/ai4os/genai-ui/blob/master/LICENSE)
+[![GitHub license](https://img.shields.io/github/license/ai4os/genai-ui.svg)](https://github.com/ai4os/genai-ui/blob/main/LICENSE)
 [![GitHub release](https://img.shields.io/github/release/ai4os/genai-ui.svg)](https://github.com/ai4os/genai-ui/releases)
-
-> ⚠️ **Warning**
->
-> This repository is under active development. Some features may be incomplete or not fully functional.
 
 Web app that provides a stable frontend for chat management, AI agents, MCP tools, databases and other AI services.
 
 ## Architecture
 
-`genai-ui` is one piece of a larger system:
+`genai-ui` is a single-page application (React + Vite) and one piece of a larger system:
 
-- **Frontend** (this repo) — Next.js chat interface: chat management, streaming responses, model selection.
-- **Backend** ([`genai-api`](https://github.com/ai4os/genai-api)) — FastAPI backend: chats, messages, model selection. This UI consumes it exclusively through its own server (BFF pattern — see below), never directly from the browser.
-- **Keycloak** — authentication provider. Realm `ai4eosc`, client `genai-ui` (confidential, with secret). The UI never talks to Keycloak from the browser either; all token exchange happens server-side.
-
-This frontend follows the **BFF (Backend for Frontend)** pattern: the browser never talks directly to `genai-api` nor to Keycloak. All communication goes through the Next.js server:
-
-- **Reads** → Server Components call straight into `lib/api/`.
-- **Writes** → Server Actions or dedicated Route Handlers, never a client-side `fetch` against `genai-api`.
-- Assistant responses arrive **streamed (SSE)**, relayed by a Route Handler that acts as a transparent proxy between the browser and `genai-api`.
+- **Frontend** (this repo) — chat interface: chat management, streaming responses, model/agent selection, knowledge collections.
+- **Backend** ([`genai-api`](https://github.com/ai4os/genai-api)) — FastAPI backend. The browser calls it **directly**, sending the user's Keycloak access token as a `Bearer` header. The API must allow this origin through CORS.
+- **Keycloak** — authentication provider. Realm `ai4eosc`, client `genai-ui`: a **public** client using the Authorization Code flow with **PKCE**. There is no client secret.
 
 ## Requirements
 
-- Node.js 20+
+- Node.js 22.12+ or 24
 - pnpm 9+ (`corepack enable` if not already installed)
-- Access to a Keycloak realm with a client configured
-- A running instance of [`genai-api`](https://github.com/ai4os/genai-api) (local or remote), with its own database already migrated
+- A Keycloak realm with the `genai-ui` client configured (see below)
+- A running instance of [`genai-api`](https://github.com/ai4os/genai-api) with `CORS_ORIGINS` including this app's origin
 
+### Keycloak client
+
+| Setting | Value |
+|---|---|
+| Client ID | `genai-ui` |
+| Client authentication | Off (public client) |
+| Standard flow | On |
+| Valid redirect URIs / post logout URIs | `http://localhost:5173/*` (+ the deployed URLs) |
+| Web origins | `http://localhost:5173` (+ the deployed origins) |
+| Audience | Mapper adding `genai-api` to the access token |
 
 ## Configuration
 
-The app reads its configuration from environment variables, loaded from `.env.local`.
+Copy the following into `.env.local` (not versioned). Vite exposes every `VITE_*` variable to the browser, so **never put secrets here**.
 
 ```bash
-# Base URL of the backend API (genai-api)
-API_URL=http://localhost:8000
-
-# Keycloak provider
-AUTH_KEYCLOAK_ID=<your-client-id>
-AUTH_KEYCLOAK_SECRET=<your-client-secret>
-AUTH_KEYCLOAK_ISSUER=https://<your-keycloak-host>/realms/<realm>
+VITE_OIDC_AUTHORITY=https://login.example.org/realms/ai4eosc
+VITE_OIDC_CLIENT_ID=genai-ui
+VITE_API_URL=https://api.example.org
 ```
-
 
 ## Local deployment
 
-1. **Install the dependencies**
+```bash
+git clone https://github.com/ai4os/genai-ui.git
+cd genai-ui
+pnpm install
+# create .env.local as described above
+pnpm dev
+```
 
-   ```bash
-   pnpm install
-   ```
-
-3. **Set up your environment variables**
-
-   Copy the block described in [Configuration](#configuration) into a `.env.local` file and fill in the values.
-
-4. **Run the app**
-
-   ```bash
-   pnpm dev
-   ```
-
-   The app will be available at `http://localhost:3000`.
-
+The app is available at `http://localhost:5173`.
 
 ## Usage
 
-Available scripts:
-
 ```bash
-pnpm dev      # development server (Turbopack)
-pnpm build    # production build
-pnpm start    # run the production build
+pnpm dev      # development server
+pnpm build    # type-check + production build (dist/)
+pnpm preview  # serve the production build locally
 pnpm lint     # ESLint
 ```
 
+## Project structure
+
+```text
+public/
+├── logos/                 # Application and project logos
+└── models/                # Model/provider icons
+
+src/
+├── App.tsx                # Application routes
+├── main.tsx               # React, authentication, and query providers
+├── components/
+│   └── ui/                # Reusable UI primitives
+├── content/               # Centralized user-facing copy
+├── features/
+│   ├── auth/              # Route protection and user menu
+│   ├── chat/
+│   │   ├── api/           # Chat API and query hooks
+│   │   ├── composer/      # Message composer and attachment handling
+│   │   ├── messages/      # Message rendering, markdown, and sources
+│   │   └── sending/       # Stream handling, errors, and pending messages
+│   └── knowledge/
+│       ├── api/           # Collection and document API/query hooks
+│       └── dialogs/       # Collection and document dialogs
+├── hooks/                 # Shared React hooks
+├── layouts/               # Shared route layouts
+├── lib/                   # Shared API, types, and utilities
+├── pages/                 # Route-level page components
+└── index.css              # Global styles
+```
+
+Feature-specific components, hooks, and API logic live in `features/`; `components/ui/` and `lib/` contain shared building blocks.
+
+
+## Docker
+
+The image is built with Node and served with nginx on port 3000. Vite bakes the configuration into the bundle at build time, so pass it as build arguments:
+
+```bash
+docker build \
+  --build-arg VITE_OIDC_AUTHORITY=https://login.example.org/realms/ai4eosc \
+  --build-arg VITE_OIDC_CLIENT_ID=genai-ui \
+  --build-arg VITE_API_URL=https://api.example.org \
+  -t genai-ui .
+docker run -p 3000:3000 genai-ui
+```
+
+CI builds and pushes the images to Harbor (`-dev` from `develop`, `-prod` on each release created by release-please).
 
 ## How to contribute
 
-The repository is formatted and linted with [ESLint](https://eslint.org).
-Commit messages follow [Conventional Commits](https://conventionalcommits.org).
+The repository is linted with [ESLint](https://eslint.org) and commit messages follow [Conventional Commits](https://conventionalcommits.org). Before committing:
 
+```bash
+pnpm lint && pnpm build
+```

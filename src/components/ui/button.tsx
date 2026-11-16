@@ -23,9 +23,11 @@ const buttonVariants = cva(
         brandDark:
           "bg-neutral-900 text-white hover:shadow-[0_4px_12px_rgba(0,0,0,0.18),0_12px_28px_rgba(0,0,0,0.14)] hover:-translate-y-px",
         brandLight:
-          "bg-white text-primary-700 shadow-1 hover:shadow-primary hover:-translate-y-px transition-transform",
+          "bg-white border border-solid border-primary-200 text-primary-700 shadow-1 hover:shadow-primary hover:-translate-y-px transition-transform",
         brandGhost:
           "bg-transparent text-white border border-white/35 backdrop-blur-sm hover:bg-white/10 hover:-translate-y-px",
+        brandOutline:
+          "border border-dashed border-primary-400 bg-transparent hover:border-primary-400 hover:bg-primary/5 hover:text-primary-700 shadow-none",
       },
       size: {
         default:

@@ -1,4 +1,4 @@
-import { Sparkles } from "lucide-react";
+
 
 type ModelIconEntry = {
   match: RegExp;
@@ -12,6 +12,7 @@ const MODEL_ICONS: ModelIconEntry[] = [
   { match: /google/i, src: "/models/gemma.svg", alt: "Gemma" },
   { match: /deepseek/i, src: "/models/deepseek.svg", alt: "DeepSeek" },
   { match: /minimaxai/i, src: "/models/minimaxai.svg", alt: "MiniMaxAI" },
+  { match: /libertaidai/i, src: "/models/libertai.svg", alt: "LibertAIDAI" },
 ];
 
 export function getModelIcon(modelId?: string | null) {
@@ -19,4 +20,5 @@ export function getModelIcon(modelId?: string | null) {
   return MODEL_ICONS.find((entry) => entry.match.test(modelId)) ?? null;
 }
 
-export { Sparkles as FallbackModelIcon };
+
+export {Sparkles as FallbackModelIcon} from "lucide-react";

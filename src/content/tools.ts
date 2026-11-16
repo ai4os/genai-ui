@@ -1,0 +1,42 @@
+export const toolsContent = {
+  title: "Tools and connections",
+  creating: "Creating",
+  milvus: {
+    title: "Knowledge bases",
+    selectAll: "Select all",
+    unselectAll: "Deselect all",
+    name: "Name",
+    namePlaceholder: "E.g.: project documentation",
+    desc: "Description",
+    descPlaceholder: "What sort of content will this collection contain?",
+    optional: "Optional",
+    unsupportedByModel:
+      "The selected model does not support tools, so it cannot use knowledge bases.",
+    collections: {
+      public: "Public collections",
+      private: "Private collections",
+      create: "Create collection",
+      createDesc: "Add a new collection to organise your knowledge.",
+      delete: "Delete collection",
+      empty: "This collection is empty",
+    },
+    files: {
+      numberOfDocs: " in this collection",
+      upload: "Upload file",
+      loading: "Loading files",
+      uploading: "Uploading",
+    },
+    toasts: {
+      loadFilesError: "The files could not be loaded",
+      uploadSuccess: "The file has been uploaded successfully",
+      uploadError: "The file(s) could not be uploaded",
+      deleteSuccess: "The file has been deleted successfully",
+      deleteError: "The file could not be deleted",
+      refreshError: "The list of files could not be updated",
+      createCollectionSuccess: "The collection has been created successfully",
+      createCollectionError: "The collection could not be created",
+      deleteCollectionSuccess: "The collection has been deleted successfully",
+      deleteCollectionError: "The collection could not be deleted",
+    },
+  },
+} as const;
