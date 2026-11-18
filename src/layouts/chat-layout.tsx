@@ -22,8 +22,8 @@ export function ChatLayout() {
   return (
     <KnowledgeSelectionProvider>
       <SidebarProvider
-        style={{ "--sidebar-width": "250px" } as React.CSSProperties}
-        className="h-svh overflow-hidden gap-[18px] bg-app-shell p-[18px] pl-0"
+        style={{ "--sidebar-width": "280px" } as React.CSSProperties}
+        className="h-svh gap-4 overflow-hidden bg-app-shell p-4 pl-0"
       >
         {isPending ? (
           <ChatListSkeleton />
