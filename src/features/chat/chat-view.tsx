@@ -90,10 +90,12 @@ export function ChatView({
     (m) => m.role === "assistant",
   );
   const [model, setModel] = useState(
-    lastAssistantMsg?.model_id ?? models[0]?.id,
+    models.find((m) => m.id === lastAssistantMsg?.model_id)?.id ??
+      models.find((m) => m.id === "AI4EOSC/default")?.id ??
+      models[0]?.id,
   );
   const [agent, setAgent] = useState(
-    lastAssistantMsg?.agent_id ?? agents[0]?.id,
+    lastAssistantMsg?.agent_id ?? agents.find((a) => a.name === "default")?.id ?? agents[0]?.id,
   );
   const [mode, setMode] = useState<Mode>(
     lastAssistantMsg?.agent_id ? "agent" : "model",

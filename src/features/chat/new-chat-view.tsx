@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import { useChatAttachments } from "./composer/use-chat-attachments";
 import { Button } from "../../components/ui/button";
 import type { ModelInfo, AgentInfo, MessageTarget } from "@/lib/types";
-import { useNavigate } from "react-router-dom"
+import { useNavigate } from "react-router-dom";
 import { setPendingMessage } from "@/features/chat/sending/pending-message";
 import { useCreateChat } from "./api/queries";
 import { MAX_ATTACHMENTS_BYTES } from "@/lib/constants";
@@ -25,9 +25,9 @@ export function NewChatView({
   initialModelId?: string;
   initialAgentId?: string;
 }>) {
-  const navigate = useNavigate()
-const createChat = useCreateChat()
-const isPending = createChat.isPending
+  const navigate = useNavigate();
+  const createChat = useCreateChat();
+  const isPending = createChat.isPending;
 
   const [content, setContent] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -43,9 +43,16 @@ const isPending = createChat.isPending
   const [model, setModel] = useState(
     requestedModel?.status === "healthy"
       ? requestedModel.id
-      : (models.find((m) => m.status === "healthy")?.id ?? models[0]?.id),
+      : (models.find((m) => m.id === "AI4EOSC/default")?.id ??
+          models.find((m) => m.status === "healthy")?.id ??
+          models[0]?.id),
   );
-  const [agent, setAgent] = useState(requestedAgent?.id ?? agents[0]?.id);
+
+  const [agent, setAgent] = useState(
+    requestedAgent?.id ??
+      agents.find((a) => a.name === "default")?.id ??
+      agents[0]?.id,
+  );
   const createdChatId = useRef<string | null>(null);
 
   const selectedModel =
@@ -83,30 +90,33 @@ const isPending = createChat.isPending
     }
   }, [initialAgentId, initialModelId, requestedAgent, requestedModel]);
 
- async function submit(text: string) {
-  const trimmed = text.trim()
-  if (!trimmed) {
-    setError(chatsContent.errors.emptyMessage)
-    return
-  }
-  setError(null)
-
-  const target: MessageTarget =
-    mode === "agent" ? { agent_id: agent } : { model_id: model }
-
-  try {
-    if (!createdChatId.current) {
-      const title = trimmed.length > 60 ? `${trimmed.slice(0, 60)}…` : trimmed
-      createdChatId.current = (await createChat.mutateAsync({ title })).id
+  async function submit(text: string) {
+    const trimmed = text.trim();
+    if (!trimmed) {
+      setError(chatsContent.errors.emptyMessage);
+      return;
     }
-    const chatId = createdChatId.current
-    setPendingMessage(chatId, trimmed, target, images, files)
-    clear()
-    navigate(`/chat/${chatId}`)
-  } catch (err) {
-    setError(err instanceof Error ? err.message : chatsContent.errors.createChat)
+    setError(null);
+
+    const target: MessageTarget =
+      mode === "agent" ? { agent_id: agent } : { model_id: model };
+
+    try {
+      if (!createdChatId.current) {
+        const title =
+          trimmed.length > 60 ? `${trimmed.slice(0, 60)}…` : trimmed;
+        createdChatId.current = (await createChat.mutateAsync({ title })).id;
+      }
+      const chatId = createdChatId.current;
+      setPendingMessage(chatId, trimmed, target, images, files);
+      clear();
+      navigate(`/chat/${chatId}`);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : chatsContent.errors.createChat,
+      );
+    }
   }
-}
 
   function handleSuggestion(text: string) {
     setContent(text);
