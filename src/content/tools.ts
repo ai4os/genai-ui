@@ -2,7 +2,7 @@ export const toolsContent = {
   title: "Tools and connections",
   creating: "Creating",
   milvus: {
-    title: "Knowledge bases",
+    title: "Knowledge sources",
     selectAll: "Select all",
     unselectAll: "Deselect all",
     clear: "Clear",
@@ -14,7 +14,7 @@ export const toolsContent = {
     descPlaceholder: "What sort of content will this collection contain?",
     optional: "Optional",
     unsupportedByModel:
-      "Some models and agents do not support the usage of knowledge bases.",
+      "Some models and agents do not support the usage of knowledge sources.",
     collections: {
       public: "Public collections",
       private: "Private collections",
