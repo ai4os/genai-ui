@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from "react";
 import { chatsContent } from "@/content/chats";
 import { ModelAgentSelector, type Mode } from "./model-agent-selector";
 import { SidebarTrigger } from "@/components/ui/sidebar";
-import { MessageCircle } from "lucide-react";
 import { ChatComposer } from "./composer/chat-composer";
 import { toast } from "sonner";
 import { useChatAttachments } from "./composer/use-chat-attachments";
