@@ -36,9 +36,7 @@ import { sharedContent } from "@/content/shared";
 import type { Collection } from "@/lib/types";
 import { useApi } from "@/lib/use-api";
 import {
-  addDocument,
-  deleteDocument,
-  listDocuments,
+  listDocuments
 } from "@/features/knowledge/api/documents";
 
 /** Documents shown per page. Keep <= the backend max (200). */
