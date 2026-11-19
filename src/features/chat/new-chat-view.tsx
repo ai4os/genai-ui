@@ -4,11 +4,10 @@ import { ModelAgentSelector, type Mode } from "./model-agent-selector";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
 import { ChatComposer } from "./composer/chat-composer";
-import { toast } from "sonner";
 import { useChatAttachments } from "./composer/use-chat-attachments";
 import { Button } from "../../components/ui/button";
 import type { ModelInfo, AgentInfo, MessageTarget } from "@/lib/types";
-import { useNavigate } from "react-router-dom"
+import { useNavigate } from "react-router-dom";
 import { setPendingMessage } from "@/features/chat/sending/pending-message";
 import { useCreateChat } from "./api/queries";
 import { MAX_ATTACHMENTS_BYTES } from "@/lib/constants";
@@ -25,9 +24,9 @@ export function NewChatView({
   initialModelId?: string;
   initialAgentId?: string;
 }>) {
-  const navigate = useNavigate()
-const createChat = useCreateChat()
-const isPending = createChat.isPending
+  const navigate = useNavigate();
+  const createChat = useCreateChat();
+  const isPending = createChat.isPending;
 
   const [content, setContent] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -79,34 +78,37 @@ const isPending = createChat.isPending
       (initialModelId && !requestedModel) ||
       (initialAgentId && !requestedAgent)
     ) {
-      toast.error(chatsContent.errors.requestedTargetUnavailable);
+      setError(chatsContent.errors.requestedTargetUnavailable);
     }
   }, [initialAgentId, initialModelId, requestedAgent, requestedModel]);
 
- async function submit(text: string) {
-  const trimmed = text.trim()
-  if (!trimmed) {
-    setError(chatsContent.errors.emptyMessage)
-    return
-  }
-  setError(null)
-
-  const target: MessageTarget =
-    mode === "agent" ? { agent_id: agent } : { model_id: model }
-
-  try {
-    if (!createdChatId.current) {
-      const title = trimmed.length > 60 ? `${trimmed.slice(0, 60)}…` : trimmed
-      createdChatId.current = (await createChat.mutateAsync({ title })).id
+  async function submit(text: string) {
+    const trimmed = text.trim();
+    if (!trimmed) {
+      setError(chatsContent.errors.emptyMessage);
+      return;
     }
-    const chatId = createdChatId.current
-    setPendingMessage(chatId, trimmed, target, images, files)
-    clear()
-    navigate(`/chat/${chatId}`)
-  } catch (err) {
-    setError(err instanceof Error ? err.message : chatsContent.errors.createChat)
+    setError(null);
+
+    const target: MessageTarget =
+      mode === "agent" ? { agent_id: agent } : { model_id: model };
+
+    try {
+      if (!createdChatId.current) {
+        const title =
+          trimmed.length > 60 ? `${trimmed.slice(0, 60)}…` : trimmed;
+        createdChatId.current = (await createChat.mutateAsync({ title })).id;
+      }
+      const chatId = createdChatId.current;
+      setPendingMessage(chatId, trimmed, target, images, files);
+      clear();
+      navigate(`/chat/${chatId}`);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : chatsContent.errors.createChat,
+      );
+    }
   }
-}
 
   function handleSuggestion(text: string) {
     setContent(text);

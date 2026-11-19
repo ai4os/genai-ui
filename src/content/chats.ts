@@ -40,10 +40,6 @@ export const chatsContent = {
       description:
         "The conversation will be deleted along with the attached documents. This action cannot be undone.",
     },
-    toasts: {
-      deleteSuccess: "The chat has been deleted successfully",
-      deleteError: "The chat could not be deleted",
-    },
   },
   selector: {
     maxInputTokens: "Max input tokens",

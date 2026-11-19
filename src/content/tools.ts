@@ -26,17 +26,5 @@ export const toolsContent = {
       loading: "Loading files",
       uploading: "Uploading",
     },
-    toasts: {
-      loadFilesError: "The files could not be loaded",
-      uploadSuccess: "The file has been uploaded successfully",
-      uploadError: "The file(s) could not be uploaded",
-      deleteSuccess: "The file has been deleted successfully",
-      deleteError: "The file could not be deleted",
-      refreshError: "The list of files could not be updated",
-      createCollectionSuccess: "The collection has been created successfully",
-      createCollectionError: "The collection could not be created",
-      deleteCollectionSuccess: "The collection has been deleted successfully",
-      deleteCollectionError: "The collection could not be deleted",
-    },
   },
 } as const;

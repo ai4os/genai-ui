@@ -1,14 +1,25 @@
-import { Navigate } from "react-router-dom"
-import { useAuth } from "react-oidc-context"
-import { Button } from "@/components/ui/button"
-import { landingContent } from "@/content/landing"
+import { Navigate, useLocation } from "react-router-dom";
+import { useAuth } from "react-oidc-context";
+import { Button } from "@/components/ui/button";
+import { landingContent } from "@/content/landing";
+import { LoadingPage } from "./loading-page";
 
 export function LandingPage() {
-  const auth = useAuth()
+  const auth = useAuth();
 
-  if (auth.isLoading) return null
-  if (auth.isAuthenticated) return <Navigate to="/chat" replace />
+  const location = useLocation();
 
+  const from = location.state?.from;
+
+  const returnTo = from
+    ? `${from.pathname}${from.search}${from.hash}`
+    : "/chat";
+
+  if (auth.isLoading) return <LoadingPage />;
+
+  if (auth.isAuthenticated) {
+    return <Navigate to={returnTo} replace />;
+  }
   return (
     <main className="flex min-h-screen">
       {/* Left side panel */}
@@ -21,24 +32,56 @@ export function LandingPage() {
         >
           <defs>
             <radialGradient id="ringGlow" cx="50%" cy="50%" r="50%">
-              <stop offset="0%" stopColor="var(--brand-end)" stopOpacity="0.35" />
-              <stop offset="100%" stopColor="var(--brand-end)" stopOpacity="0" />
+              <stop
+                offset="0%"
+                stopColor="var(--brand-end)"
+                stopOpacity="0.35"
+              />
+              <stop
+                offset="100%"
+                stopColor="var(--brand-end)"
+                stopOpacity="0"
+              />
             </radialGradient>
           </defs>
 
           <circle cx="600" cy="130" r="380" fill="url(#ringGlow)">
-            <animateTransform attributeName="transform" type="translate" values="0,0; -24,18; 0,0" dur="18s" repeatCount="indefinite" />
+            <animateTransform
+              attributeName="transform"
+              type="translate"
+              values="0,0; -24,18; 0,0"
+              dur="18s"
+              repeatCount="indefinite"
+            />
           </circle>
 
           <g fill="none" stroke="#FFFFFF">
             <circle cx="600" cy="130" r="330" strokeWidth="1" opacity="0.16">
-              <animateTransform attributeName="transform" type="translate" values="0,0; -18,24; 0,0" dur="16s" repeatCount="indefinite" />
+              <animateTransform
+                attributeName="transform"
+                type="translate"
+                values="0,0; -18,24; 0,0"
+                dur="16s"
+                repeatCount="indefinite"
+              />
             </circle>
             <circle cx="600" cy="130" r="235" strokeWidth="1" opacity="0.26">
-              <animateTransform attributeName="transform" type="translate" values="0,0; 16,-18; 0,0" dur="13s" repeatCount="indefinite" />
+              <animateTransform
+                attributeName="transform"
+                type="translate"
+                values="0,0; 16,-18; 0,0"
+                dur="13s"
+                repeatCount="indefinite"
+              />
             </circle>
             <circle cx="600" cy="130" r="145" strokeWidth="1.2" opacity="0.4">
-              <animateTransform attributeName="transform" type="translate" values="0,0; -10,-14; 0,0" dur="10s" repeatCount="indefinite" />
+              <animateTransform
+                attributeName="transform"
+                type="translate"
+                values="0,0; -10,-14; 0,0"
+                dur="10s"
+                repeatCount="indefinite"
+              />
             </circle>
           </g>
         </svg>
@@ -57,7 +100,12 @@ export function LandingPage() {
             {landingContent.footer.disclaimer}{" "}
             {landingContent.footer.partners.map((partner, i) => (
               <span key={partner.href}>
-                <a href={partner.href} className="underline" target="_blank" rel="noopener noreferrer">
+                <a
+                  href={partner.href}
+                  className="underline"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
                   {partner.label}
                 </a>
                 {i < landingContent.footer.partners.length - 1 ? " and " : " "}
@@ -77,13 +125,19 @@ export function LandingPage() {
             variant="brandPrimary"
             size="pill"
             className="w-full"
-            onClick={() => auth.signinRedirect()}
+            onClick={() =>
+              auth.signinRedirect({
+                state: { returnTo },
+              })
+            }
           >
             {landingContent.auth.loginButton}
           </Button>
-          {auth.error && <p className="text-sm text-error">{auth.error.message}</p>}
+          {auth.error && (
+            <p className="text-sm text-error">{auth.error.message}</p>
+          )}
         </div>
       </div>
     </main>
-  )
+  );
 }
