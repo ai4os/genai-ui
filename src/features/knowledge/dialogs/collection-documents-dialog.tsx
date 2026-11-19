@@ -26,12 +26,20 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 import { toolsContent } from "@/content/tools";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { toast } from "sonner";
 import { sharedContent } from "@/content/shared";
 import type { Collection } from "@/lib/types";
 import { useApi } from "@/lib/use-api";
-import { addDocument, deleteDocument, listDocuments } from "@/features/knowledge/api/documents";
+import {
+  addDocument,
+  deleteDocument,
+  listDocuments,
+} from "@/features/knowledge/api/documents";
 
 /** Documents shown per page. Keep <= the backend max (200). */
 const PAGE_SIZE = 25;
@@ -64,9 +72,11 @@ export function CollectionDocsDialog({
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
-  const [deletingFileName, setDeletingFileName] = useState<string | null>(null);
+
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
   const [isDeletingCollection, setIsDeletingCollection] = useState(false);
+  const [fileToDelete, setFileToDelete] = useState<string | null>(null);
+  const [isDeletingFile, setIsDeletingFile] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   // Client-side cache of already fetched pages, keyed by `${collectionId}:${page}`.
@@ -137,7 +147,7 @@ export function CollectionDocsDialog({
     return () => {
       cancelled = true;
     };
-  }, [collectionId, page, reloadKey, api])
+  }, [collectionId, page, reloadKey, api]);
 
   // Called after upload/delete. Documents are sorted, so any change can shift
   // every page: drop all cached pages of this collection and refetch.
@@ -171,18 +181,20 @@ export function CollectionDocsDialog({
     }
   };
 
-  const handleDeleteDocument = async (filename: string) => {
-    if (!collectionId) return;
+  const handleDeleteDocument = async () => {
+    if (!collectionId || !fileToDelete) return;
 
-    setDeletingFileName(filename);
+    setIsDeletingFile(true);
+
     try {
-      await deleteDocument(api, collectionId, filename);
+      await deleteDocument(api, collectionId, fileToDelete);
       toast.success(toolsContent.milvus.toasts.deleteSuccess);
+      setFileToDelete(null);
       reloadCurrentPage();
     } catch {
       toast.error(toolsContent.milvus.toasts.deleteError);
     } finally {
-      setDeletingFileName(null);
+      setIsDeletingFile(false);
     }
   };
 
@@ -220,10 +232,7 @@ export function CollectionDocsDialog({
 
           {/* Visible only when the collection has a description */}
           <DialogDescription
-            className={cn(
-              "mt-2 leading-normal",
-              !description && "sr-only",
-            )}
+            className={cn("mt-2 leading-normal", !description && "sr-only")}
           >
             {description ?? countLabel}
           </DialogDescription>
@@ -262,7 +271,10 @@ export function CollectionDocsDialog({
               <DropdownMenuTrigger
                 disabled={isBusy || isConfirmingDelete}
                 aria-label={toolsContent.milvus.collections.options}
-                className={buttonVariants({ variant: "ghost", size: "icon-sm" })}
+                className={buttonVariants({
+                  variant: "ghost",
+                  size: "icon-sm",
+                })}
               >
                 <MoreHorizontal strokeWidth={1.75} />
               </DropdownMenuTrigger>
@@ -330,25 +342,16 @@ export function CollectionDocsDialog({
                         <Button
                           type="button"
                           variant="ghost"
-                          size={
-                            deletingFileName === fileName ? "sm" : "icon-sm"
-                          }
-                          aria-label={toolsContent.milvus.files.remove.replace(
+                          size={"icon-sm"}
+                          aria-label={toolsContent.milvus.files.deleteConfirmTitle.replace(
                             "{name}",
                             fileName,
                           )}
                           className="shrink-0 text-muted-foreground"
-                          onClick={() => handleDeleteDocument(fileName)}
-                          disabled={deletingFileName === fileName}
+                          onClick={() => setFileToDelete(fileName)}
+                          disabled={fileToDelete === fileName}
                         >
-                          {deletingFileName === fileName ? (
-                            <>
-                              <Loader2 className="animate-spin" />
-                              {sharedContent.deleting}
-                            </>
-                          ) : (
-                            <Trash2 strokeWidth={1.75} />
-                          )}
+                          <Trash2 strokeWidth={1.75} />
                         </Button>
                       }
                     />
@@ -393,7 +396,7 @@ export function CollectionDocsDialog({
           </div>
         )}
 
-        {/* Delete confirmation */}
+        {/* Delete collection confirmation */}
         <Dialog
           open={isPrivate && isConfirmingDelete}
           onOpenChange={(open) => {
@@ -437,6 +440,55 @@ export function CollectionDocsDialog({
                   </>
                 ) : (
                   toolsContent.milvus.collections.delete
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Delete file confirmation */}
+        <Dialog
+          open={fileToDelete !== null}
+          onOpenChange={(open) => {
+            if (!open && !isDeletingFile) setFileToDelete(null);
+          }}
+        >
+          <DialogContent showCloseButton={false} className="sm:max-w-[400px]">
+            <DialogHeader>
+              <DialogTitle>
+                {toolsContent.milvus.files.deleteConfirmTitle.replace(
+                  "{name}",
+                  fileToDelete ?? "",
+                )}
+              </DialogTitle>
+              <DialogDescription>
+            {toolsContent.milvus.files.deleteConfirmDesc}
+              </DialogDescription>
+            </DialogHeader>
+
+            <DialogFooter className="mt-4">
+              <Button
+                type="button"
+                variant="secondary"
+                disabled={isDeletingFile}
+                onClick={() => setFileToDelete(null)}
+              >
+                {sharedContent.cancel}
+              </Button>
+
+              <Button
+                type="button"
+                variant="destructiveSolid"
+                disabled={isDeletingFile}
+                onClick={handleDeleteDocument}
+              >
+                {isDeletingFile ? (
+                  <>
+                    <Loader2 className="animate-spin" />
+                    {sharedContent.deleting}
+                  </>
+                ) : (
+                  sharedContent.delete
                 )}
               </Button>
             </DialogFooter>

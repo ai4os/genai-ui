@@ -32,11 +32,13 @@ export const toolsContent = {
     files: {
       numberOfDocs: " in this collection",
       upload: "Upload file",
-      remove: "Remove {name}",
       previousPage: "Previous page",
       nextPage: "Next page",
       loading: "Loading files",
       uploading: "Uploading",
+      deleteConfirmTitle: "Delete “{name}”?",
+      deleteConfirmDesc:
+        "This permanently removes the file from the collection. This can’t be undone.",
     },
     toasts: {
       loadFilesError: "The files could not be loaded",
