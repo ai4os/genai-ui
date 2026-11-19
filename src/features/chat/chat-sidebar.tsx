@@ -19,7 +19,6 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "../../components/ui/tooltip";
-import { toast } from "sonner";
 import {
   Dialog,
   DialogContent,
@@ -119,10 +118,9 @@ export function ChatSidebar({ chats, userMenu }: Readonly<AppSidebarProps>) {
       if (pathname === `/chat/${chatId}`) navigate("/chat", { replace: true });
 
       await deleteChat.mutateAsync(chatId);
-      toast.success(chatsContent.chat.toasts.deleteSuccess);
       setChatToDelete(null);
     } catch {
-      toast.error(chatsContent.chat.toasts.deleteError);
+      // The mutation query owns the error toast.
     } finally {
       setIsDeleting(false);
     }

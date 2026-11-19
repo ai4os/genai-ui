@@ -6,11 +6,9 @@ import {
   useState,
 } from "react";
 import { v4 as uuidv4 } from "uuid";
-import { toast } from "sonner";
 
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { chatsContent } from "@/content/chats";
-import { toolsContent } from "@/content/tools";
 import { MAX_ATTACHMENTS_BYTES } from "@/lib/constants";
 import type {
   AgentInfo,
@@ -24,7 +22,6 @@ import type {
 } from "@/lib/types";
 import { useApi } from "@/lib/use-api";
 
-import { uploadChatFiles } from "./api/chat-files";
 import { ChatComposer } from "./composer/chat-composer";
 import { useChatAttachments } from "./composer/use-chat-attachments";
 import { ChatErrorBanner } from "./messages/chat-error-banner";
@@ -36,6 +33,7 @@ import {
   useChatStream,
 } from "./sending/use-chat-stream";
 import { useKnowledgeSelection } from "../knowledge/use-knowledge-selection";
+import { useUploadChatFiles } from "./api/queries";
 
 function tempId() {
   return `temp-${uuidv4()}`;
@@ -80,6 +78,7 @@ export function ChatView({
   agents: AgentInfo[];
 }>) {
   const api = useApi();
+  const uploadChatFiles = useUploadChatFiles();
   const { selectedIds, setMilvusDisabled } = useKnowledgeSelection();
 
   // --- Messages and model/agent selection ---
@@ -169,14 +168,12 @@ export function ChatView({
       if (filesToUpload.length) {
         setUploading(true);
         try {
-          uploaded = await uploadChatFiles(api, chatId, filesToUpload);
-        } catch (err) {
+          uploaded = await uploadChatFiles.mutateAsync({
+            chatId,
+            files: filesToUpload,
+          });
+        } catch {
           setMessages((prev) => prev.filter((m) => m.id !== userMsgId));
-          toast.error(
-            err instanceof Error
-              ? err.message
-              : toolsContent.milvus.toasts.uploadError,
-          );
           return false;
         } finally {
           setUploading(false);

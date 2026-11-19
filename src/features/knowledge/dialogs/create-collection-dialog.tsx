@@ -13,7 +13,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { toolsContent } from "@/content/tools";
 import { Loader2 } from "lucide-react";
-import { toast } from "sonner";
 import { sharedContent } from "@/content/shared";
 
 export interface CreateCollectionData {
@@ -60,10 +59,7 @@ export function CreateCollectionDialog({
         name: trimmedName,
         description: description.trim() || undefined,
       });
-      toast.success(toolsContent.milvus.toasts.createCollectionSuccess);
       handleOpenChange(false);
-    } catch {
-      toast.error(toolsContent.milvus.toasts.createCollectionError);
     } finally {
       setIsSubmitting(false);
     }

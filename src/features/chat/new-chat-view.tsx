@@ -3,7 +3,6 @@ import { chatsContent } from "@/content/chats";
 import { ModelAgentSelector, type Mode } from "./model-agent-selector";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { ChatComposer } from "./composer/chat-composer";
-import { toast } from "sonner";
 import { useChatAttachments } from "./composer/use-chat-attachments";
 import { Button } from "../../components/ui/button";
 import type { ModelInfo, AgentInfo, MessageTarget } from "@/lib/types";
@@ -29,7 +28,6 @@ export function NewChatView({
   const isPending = createChat.isPending;
 
   const [content, setContent] = useState("");
-  const [error, setError] = useState<string | null>(null);
 
   const requestedModel = initialModelId
     ? models.find((m) => m.id === initialModelId && m.status !== "unhealthy")
@@ -37,6 +35,12 @@ export function NewChatView({
   const requestedAgent = initialAgentId
     ? agents.find((a) => a.id === initialAgentId)
     : undefined;
+  const [error, setError] = useState<string | null>(() =>
+    (initialModelId && !requestedModel) ||
+    (initialAgentId && !requestedAgent)
+      ? chatsContent.errors.requestedTargetUnavailable
+      : null,
+  );
 
   const [mode, setMode] = useState<Mode>(requestedAgent ? "agent" : "model");
   const [model, setModel] = useState(
@@ -79,15 +83,6 @@ export function NewChatView({
     mode,
     selectedModel,
   );
-
-  useEffect(() => {
-    if (
-      (initialModelId && !requestedModel) ||
-      (initialAgentId && !requestedAgent)
-    ) {
-      toast.error(chatsContent.errors.requestedTargetUnavailable);
-    }
-  }, [initialAgentId, initialModelId, requestedAgent, requestedModel]);
 
   async function submit(text: string) {
     const trimmed = text.trim();

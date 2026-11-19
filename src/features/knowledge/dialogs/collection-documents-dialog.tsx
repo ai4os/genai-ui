@@ -31,15 +31,12 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { toast } from "sonner";
 import { sharedContent } from "@/content/shared";
 import type { Collection } from "@/lib/types";
 import { useApi } from "@/lib/use-api";
-import {
-  addDocument,
-  deleteDocument,
-  listDocuments,
-} from "@/features/knowledge/api/documents";
+import { listDocuments } from "@/features/knowledge/api/documents";
+import { feedbackContent } from "@/content/feedback";
+import { useAddDocument, useDeleteDocument } from "../api/queries";
 
 /** Documents shown per page. Keep <= the backend max (200). */
 const PAGE_SIZE = 25;
@@ -83,6 +80,8 @@ export function CollectionDocsDialog({
   // Lets us show a visited page instantly, with no loader and no server call.
   const pageCacheRef = useRef(new Map<string, CachedPage>());
   const collectionId = collection?.id ?? collection?.name ?? null;
+  const addDocument = useAddDocument();
+  const deleteDocument = useDeleteDocument();
   const isPrivate = collection?.scope !== "public";
   const description = collection?.description?.trim() || null;
 
@@ -138,7 +137,7 @@ export function CollectionDocsDialog({
         setTotal(result.total);
       })
       .catch(() => {
-        if (!cancelled) setError(toolsContent.milvus.toasts.loadFilesError);
+        if (!cancelled) setError(feedbackContent.toasts.loadFilesError);
       })
       .finally(() => {
         if (!cancelled) setIsLoading(false);
@@ -168,11 +167,11 @@ export function CollectionDocsDialog({
 
     setIsUploading(true);
     try {
-      await addDocument(api, collectionId, selectedFile);
-      toast.success(toolsContent.milvus.toasts.uploadSuccess);
+      await addDocument.mutateAsync({
+        collectionId,
+        file: selectedFile,
+      });
       reloadCurrentPage();
-    } catch {
-      toast.error(toolsContent.milvus.toasts.uploadError);
     } finally {
       setIsUploading(false);
       if (fileInputRef.current) {
@@ -187,12 +186,12 @@ export function CollectionDocsDialog({
     setIsDeletingFile(true);
 
     try {
-      await deleteDocument(api, collectionId, fileToDelete);
-      toast.success(toolsContent.milvus.toasts.deleteSuccess);
+      await deleteDocument.mutateAsync({
+        collectionId,
+        fileName: fileToDelete,
+      });
       setFileToDelete(null);
       reloadCurrentPage();
-    } catch {
-      toast.error(toolsContent.milvus.toasts.deleteError);
     } finally {
       setIsDeletingFile(false);
     }
@@ -204,10 +203,7 @@ export function CollectionDocsDialog({
     setIsDeletingCollection(true);
     try {
       await onDeleteCollection(collectionId);
-      toast.success(toolsContent.milvus.toasts.deleteCollectionSuccess);
       onOpenChange(false);
-    } catch {
-      toast.error(toolsContent.milvus.toasts.deleteCollectionError);
     } finally {
       setIsDeletingCollection(false);
       setIsConfirmingDelete(false);
@@ -462,7 +458,7 @@ export function CollectionDocsDialog({
                 )}
               </DialogTitle>
               <DialogDescription>
-            {toolsContent.milvus.files.deleteConfirmDesc}
+                {toolsContent.milvus.files.deleteConfirmDesc}
               </DialogDescription>
             </DialogHeader>
 
