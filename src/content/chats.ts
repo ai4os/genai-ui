@@ -7,9 +7,12 @@ export const chatsContent = {
     yesterday: "Yesterday",
     lastWeek: "Last 7 days",
     previous: "Previous",
+    clear: "Clear"
   },
   chat: {
     send: "Send",
+    stop: "Stop",
+    attach: "Attach file",
     model: "Model",
     agent: "Agent",
     general: "General",

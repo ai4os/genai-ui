@@ -8,7 +8,6 @@ import {
 import { v4 as uuidv4 } from "uuid";
 import { toast } from "sonner";
 
-import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { chatsContent } from "@/content/chats";
 import { toolsContent } from "@/content/tools";
@@ -276,11 +275,8 @@ export function ChatView({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="flex items-center justify-between gap-2 border-b px-4 py-3 md:px-8">
-        <div className="flex items-center gap-2 pr-[0.5em]">
-          <SidebarTrigger />
-          <Separator orientation="vertical" className="h-4" />
-        </div>
+      <header className="flex min-h-[72px] items-center gap-3 border-b border-border px-6 py-3">
+        <SidebarTrigger />
         <ModelAgentSelector
           models={models}
           agents={agents}
@@ -292,7 +288,7 @@ export function ChatView({
           onModeChange={setMode}
           disabled={sending || !!error}
         />
-      </div>
+      </header>
 
       <div
         ref={scrollRef}

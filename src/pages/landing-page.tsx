@@ -74,8 +74,7 @@ export function LandingPage() {
       <div className="flex w-full items-center justify-center bg-brand-surface px-8 py-16 lg:w-[45%]">
         <div className="flex flex-col items-center gap-3">
           <Button
-            variant="brandPrimary"
-            size="pill"
+            size="lg"
             className="w-full"
             onClick={() => auth.signinRedirect()}
           >
