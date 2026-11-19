@@ -1,6 +1,6 @@
 import { useLayoutEffect, useRef, useState } from "react";
-import { ImagePlus, Paperclip, Plus, X } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { ArrowUp, ImagePlus, Paperclip, Plus, Square, X } from "lucide-react";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { chatsContent } from "@/content/chats";
 import { cn } from "@/lib/utils";
 import { v4 as uuidv4 } from "uuid";
@@ -155,7 +155,7 @@ export function ChatComposer({
   }
 
   return (
-    <div className="border-t bg-background px-4 py-3 md:px-8">
+    <div className="px-6 pb-6">
       <div className="mx-auto max-w-3xl">
         {/* Attached images preview */}
         {images.length > 0 && (
@@ -166,13 +166,13 @@ export function ChatComposer({
                   <img
                     src={img.dataUrl}
                     alt={img.name}
-                    className="h-14 w-14 rounded-md border object-cover"
+                    className="size-14 rounded-[10px] border border-input object-cover"
                   />
                   <button
                     type="button"
                     onClick={() => removeImage(img.id)}
                     title={chatsContent.chat.removeImage}
-                    className="absolute -right-1.5 -top-1.5 flex size-5 items-center justify-center cursor-pointer rounded-full border bg-background text-muted-foreground shadow-1 hover:text-foreground"
+                    className="absolute -right-1.5 -top-1.5 flex size-5 cursor-pointer items-center justify-center rounded-full border border-input bg-background text-muted-foreground shadow-1 outline-none hover:text-foreground focus-visible:outline-2 focus-visible:outline-primary"
                   >
                     <X className="size-3" />
                   </button>
@@ -180,7 +180,7 @@ export function ChatComposer({
               ))}
             </div>
             {imageError && images.length === 0 && (
-              <p className="mx-auto mt-1 max-w-3xl text-[11px] text-destructive">
+              <p className="mx-auto mt-1 max-w-3xl text-xs text-destructive">
                 {imageError}
               </p>
             )}
@@ -193,7 +193,7 @@ export function ChatComposer({
             {files.map((file, idx) => (
               <div
                 key={idx}
-                className="flex items-center gap-2.5 rounded-lg border bg-muted/40 px-3 py-2 text-xs"
+                className="flex items-center gap-2.5 rounded-xs border border-input bg-soft px-3 py-2 text-xs"
               >
                 <div className="flex size-7 shrink-0 items-center justify-center rounded-md border bg-background">
                   <Paperclip className="size-4 text-muted-foreground" />
@@ -202,7 +202,7 @@ export function ChatComposer({
                   <span className="truncate font-medium text-foreground">
                     {file.name}
                   </span>
-                  <span className="text-[10px] text-muted-foreground">
+                  <span className="text-xs text-muted-foreground">
                     {formatFileSize(file.size)}
                   </span>
                 </div>
@@ -220,9 +220,8 @@ export function ChatComposer({
 
         <div
           className={cn(
-            "flex items-end gap-2 rounded-3xl border bg-background px-2 py-1.5 shadow-2",
-            blocked &&
-              "border-[var(--color-error-border)] bg-[var(--color-error-surface)]",
+            "flex min-h-[60px] items-end gap-2 rounded-[30px] border border-input bg-background p-[9px] transition-[border-color,box-shadow] focus-within:border-primary focus-within:ring-[3px] focus-within:ring-primary/15",
+            blocked && "border-error-border bg-error-surface",
           )}
         >
           {/* Hidden input for images */}
@@ -255,11 +254,13 @@ export function ChatComposer({
             <DropdownMenuTrigger
               type="button"
               disabled={isInputDisabled}
+              aria-label={chatsContent.chat.attach}
               className={cn(
-                "inline-flex items-center justify-center rounded-full border border-input bg-background cursor-pointer size-9 shrink-0 shadow-sm hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-40",
+                buttonVariants({ variant: "ghost", size: "icon" }),
+                "aria-expanded:bg-muted",
               )}
             >
-              <Plus className="size-4" />
+              <Plus className="size-5" strokeWidth={1.75} />
             </DropdownMenuTrigger>
 
             <DropdownMenuContent align="start" sideOffset={15} className="w-48">
@@ -339,26 +340,27 @@ export function ChatComposer({
                 if (!isInputDisabled) onSend();
               }
             }}
-            className="min-h-9 flex-1 resize-none bg-transparent px-3 py-2 text-sm leading-5 outline-none placeholder:text-muted-foreground disabled:text-muted-foreground"
+            aria-label={chatsContent.chat.inputPlaceholder}
+            className="min-h-10 min-w-0 flex-1 resize-none bg-transparent px-1 py-2.5 text-[15px] leading-5 text-foreground outline-none placeholder:text-muted-foreground disabled:text-muted-foreground"
           />
 
           {showStop ? (
             <Button
-              variant="outline"
+              variant="secondary"
               size="icon"
               onClick={onStop}
-              className="rounded-full"
+              aria-label={chatsContent.chat.stop}
             >
-              ■
+              <Square className="size-4 fill-current" strokeWidth={2} />
             </Button>
           ) : (
             <Button
               size="icon"
               disabled={isInputDisabled}
               onClick={onSend}
-              className="rounded-full bg-primary-600 hover:bg-primary-700 disabled:opacity-50"
+              aria-label={chatsContent.chat.send}
             >
-              ↑
+              <ArrowUp className="size-5" strokeWidth={2} />
             </Button>
           )}
         </div>
@@ -366,10 +368,8 @@ export function ChatComposer({
       {hint && (
         <p
           className={cn(
-            "mx-auto mt-2 max-w-3xl text-[11px]",
-            hintTone === "error"
-              ? "text-[var(--color-error)]"
-              : "text-sm text-destructive",
+            "mx-auto mt-2 max-w-3xl text-xs",
+            hintTone === "error" ? "text-error" : "text-destructive",
           )}
         >
           {hint}

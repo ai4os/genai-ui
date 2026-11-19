@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from "react";
 import { chatsContent } from "@/content/chats";
 import { ModelAgentSelector, type Mode } from "./model-agent-selector";
 import { SidebarTrigger } from "@/components/ui/sidebar";
-import { Separator } from "@/components/ui/separator";
 import { ChatComposer } from "./composer/chat-composer";
 import { useChatAttachments } from "./composer/use-chat-attachments";
 import { Button } from "../../components/ui/button";
@@ -119,11 +118,8 @@ export function NewChatView({
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center justify-between border-b px-4 py-3 md:pr-8 md:pl-3">
-        <div className="flex items-center gap-2">
-          <SidebarTrigger />
-          <Separator orientation="vertical" className="h-4" />
-        </div>
+      <header className="flex min-h-[72px] items-center gap-3 border-b border-border px-6 py-3">
+        <SidebarTrigger />
         <ModelAgentSelector
           models={models}
           agents={agents}
@@ -135,31 +131,34 @@ export function NewChatView({
           onModeChange={setMode}
           disabled={isPending}
         />
-      </div>
+      </header>
 
-      <div className="flex flex-1 flex-col items-center justify-center gap-4 px-6 text-center">
-        <div className="flex size-40 items-center justify-center rounded-2xl ">
+      <div className="flex flex-1 flex-col items-center justify-center gap-3.5 px-6 py-8 text-center">
+        <div
+          aria-hidden="true"
+          className="flex size-40 items-center justify-center rounded-full"
+        >
           <img
             src="/logos/genai.svg"
             alt=""
             className="size-35 drop-shadow-xl"
           />
         </div>
-        <h2 className="text-lg font-semibold">
+        <h1 className="text-2xl font-semibold tracking-[-0.01em]">
           {chatsContent.chat.emptyStateTitle}
-        </h2>
-        <p className="max-w-sm text-sm text-muted-foreground">
+        </h1>
+        <p className="max-w-[460px] text-[15px] leading-normal text-muted-foreground">
           {chatsContent.chat.emptyStateSubtitle}
         </p>
-        <div className="flex w-full max-w-lg flex-wrap justify-center gap-2">
+        <div className="mt-1.5 flex w-full max-w-[680px] flex-wrap justify-center gap-2.5">
           {suggestions.map((s) => (
             <Button
-              variant="brandLight"
+              variant="chip"
               key={s}
               type="button"
               disabled={isPending}
               onClick={() => handleSuggestion(s)}
-              className="h-auto max-w-full whitespace-normal break-words rounded-md border px-3.5 py-2 text-center text-xs leading-snug hover:border-primary-400 hover:bg-primary-50 disabled:opacity-50"
+              className="h-auto min-h-10 max-w-full py-2 text-center leading-snug whitespace-normal"
             >
               {s}
             </Button>
