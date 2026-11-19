@@ -10,6 +10,7 @@ import { WebStorageStateStore } from "oidc-client-ts"
 import { ApiError } from "./lib/api.ts"
 import { notify } from "./lib/notify.ts"
 import { Toaster } from "sonner"
+import type { User } from "oidc-client-ts"
 
 const oidcConfig = {
   authority: import.meta.env.VITE_OIDC_AUTHORITY,
@@ -23,8 +24,12 @@ const oidcConfig = {
 
   automaticSilentRenew: true,
 
-  onSigninCallback: (user : any) => {
-    const returnTo = user?.state?.returnTo ?? "/chat"
+  onSigninCallback: (user: User | undefined) => {
+    const state = user?.state
+    const returnTo =
+      typeof state === "object" && state !== null && "returnTo" in state
+        ? state.returnTo
+        : "/chat"
 
     const safeReturnTo =
       typeof returnTo === "string" && returnTo.startsWith("/") && !returnTo.startsWith("//")

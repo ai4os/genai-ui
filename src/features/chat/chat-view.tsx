@@ -171,7 +171,7 @@ export function ChatView({
             chatId,
             files: filesToUpload,
           });
-        } catch (err) {
+        } catch {
           setMessages((prev) => prev.filter((m) => m.id !== userMsgId));
           return false;
         } finally {

@@ -29,7 +29,6 @@ export function NewChatView({
   const isPending = createChat.isPending;
 
   const [content, setContent] = useState("");
-  const [error, setError] = useState<string | null>(null);
 
   const requestedModel = initialModelId
     ? models.find((m) => m.id === initialModelId && m.status !== "unhealthy")
@@ -37,6 +36,12 @@ export function NewChatView({
   const requestedAgent = initialAgentId
     ? agents.find((a) => a.id === initialAgentId)
     : undefined;
+  const [error, setError] = useState<string | null>(() =>
+    (initialModelId && !requestedModel) ||
+    (initialAgentId && !requestedAgent)
+      ? chatsContent.errors.requestedTargetUnavailable
+      : null,
+  );
 
   const [mode, setMode] = useState<Mode>(requestedAgent ? "agent" : "model");
   const [model, setModel] = useState(
@@ -72,15 +77,6 @@ export function NewChatView({
     mode,
     selectedModel,
   );
-
-  useEffect(() => {
-    if (
-      (initialModelId && !requestedModel) ||
-      (initialAgentId && !requestedAgent)
-    ) {
-      setError(chatsContent.errors.requestedTargetUnavailable);
-    }
-  }, [initialAgentId, initialModelId, requestedAgent, requestedModel]);
 
   async function submit(text: string) {
     const trimmed = text.trim();
