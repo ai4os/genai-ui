@@ -47,9 +47,16 @@ export function NewChatView({
   const [model, setModel] = useState(
     requestedModel?.status === "healthy"
       ? requestedModel.id
-      : (models.find((m) => m.status === "healthy")?.id ?? models[0]?.id),
+      : (models.find((m) => m.id === "AI4EOSC/default")?.id ??
+          models.find((m) => m.status === "healthy")?.id ??
+          models[0]?.id),
   );
-  const [agent, setAgent] = useState(requestedAgent?.id ?? agents[0]?.id);
+
+  const [agent, setAgent] = useState(
+    requestedAgent?.id ??
+      agents.find((a) => a.name === "default")?.id ??
+      agents[0]?.id,
+  );
   const createdChatId = useRef<string | null>(null);
 
   const selectedModel =
