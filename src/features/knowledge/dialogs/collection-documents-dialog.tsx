@@ -31,13 +31,12 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { toast } from "sonner";
 import { sharedContent } from "@/content/shared";
 import type { Collection } from "@/lib/types";
 import { useApi } from "@/lib/use-api";
-import {
-  listDocuments
-} from "@/features/knowledge/api/documents";
+import { listDocuments } from "@/features/knowledge/api/documents";
+import { feedbackContent } from "@/content/feedback";
+import { useAddDocument, useDeleteDocument } from "../api/queries";
 
 /** Documents shown per page. Keep <= the backend max (200). */
 const PAGE_SIZE = 25;
@@ -59,6 +58,7 @@ export function CollectionDocsDialog({
   onDeleteCollection,
 }: Readonly<CollectionFilesDialogProps>) {
   const api = useApi();
+
   // Files of the current page
   const [files, setFiles] = useState<string[] | null>(null);
   const [total, setTotal] = useState(0);
@@ -186,8 +186,10 @@ export function CollectionDocsDialog({
     setIsDeletingFile(true);
 
     try {
-      await deleteDocument(api, collectionId, fileToDelete);
-      toast.success(toolsContent.milvus.toasts.deleteSuccess);
+      await deleteDocument.mutateAsync({
+        collectionId,
+        fileName: fileToDelete,
+      });
       setFileToDelete(null);
       reloadCurrentPage();
     } finally {
@@ -456,7 +458,7 @@ export function CollectionDocsDialog({
                 )}
               </DialogTitle>
               <DialogDescription>
-            {toolsContent.milvus.files.deleteConfirmDesc}
+                {toolsContent.milvus.files.deleteConfirmDesc}
               </DialogDescription>
             </DialogHeader>
 

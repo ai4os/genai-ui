@@ -76,8 +76,6 @@ function CollectionGroup({
   onToggle: (id: string) => void;
   onOpenFiles: (collection: Collection) => void;
 }>) {
-  if (collections.length === 0) return null;
-
   return (
     <Collapsible defaultOpen>
       <CollapsibleTrigger className="group/trigger flex h-9 w-full cursor-pointer items-center justify-between rounded-lg px-2 text-xs font-semibold tracking-[0.06em] text-muted-foreground uppercase outline-none hover:bg-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">

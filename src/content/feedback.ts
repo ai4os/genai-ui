@@ -47,7 +47,7 @@ export const feedbackContent = {
     loadFilesError: "The files could not be loaded",
     collectionCreated: "The collection has been created successfully",
     collectionCreatedError: "The collection could not be created",
-    collectionDeleted: "The collection has been deleted successfull",
+    collectionDeleted: "The collection has been deleted successfully",
     collectionDeletedError: "The collection could not be deleted",
   },
 };
