@@ -1,20 +1,34 @@
-import { chatsContent } from "@/content/chats";
-import { splitSources } from "@/features/chat/messages/chat-sources";
-import { normalizeLatexDelimiters } from "@/lib/latex";
-import type { MessageImage, MessageFileView } from "@/lib/types";
-import { cn } from "cn";
-import { Bot, ChevronDown } from "lucide-react";
+import { Bot, ChevronDown, Copy } from "lucide-react";
 import ReactMarkdown from "react-markdown";
-import SyntaxHighlighter from "react-syntax-highlighter";
-import { atelierSeasideLight } from "react-syntax-highlighter/dist/esm/styles/hljs";
-import { MessageSources } from "./message-sources";
+
+import { Button } from "@/components/ui/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { chatsContent } from "@/content/chats";
+import { sharedContent } from "@/content/shared";
+import { normalizeLatexDelimiters } from "@/lib/latex";
+import type { MessageFileView, MessageImage } from "@/lib/types";
+import { cn } from "@/lib/utils";
+
+import { splitSources } from "./chat-sources";
 import {
   markdownComponents,
-  rehypePlugins,
   remarkPlugins,
+  rehypePlugins,
 } from "./markdown-content";
-import { MessageImages, MessageFiles } from "./message-attatchments";
+import { MarkdownCode } from "./markdown-code";
+import { MessageSources } from "./message-sources";
+import { MessageFiles, MessageImages } from "./message-attatchments";
+import { useCopyToClipboard } from "@/hooks/copy-to-clipboard";
 import { FallbackModelIcon, getModelIcon } from "@/lib/model-icons";
+
+const responseComponents = {
+  a: markdownComponents.a,
+  code: MarkdownCode,
+};
 
 function formatTime(iso: string) {
   return new Intl.DateTimeFormat("es-ES", {
@@ -76,6 +90,8 @@ export function MessageBubble({
   createdAt: string;
   isStreaming?: boolean;
 }>) {
+  const copyToClipboard = useCopyToClipboard();
+
   const isUser = role === "user";
   const isAgent = !!agentName;
 
@@ -92,6 +108,9 @@ export function MessageBubble({
     displayThinking ||
     isTyping
   );
+
+  const canCopy =  !isStreaming && !!displayContent;
+  const handleCopy = () => copyToClipboard(displayContent.trim());
 
   return (
     <div
@@ -177,46 +196,7 @@ export function MessageBubble({
                   <ReactMarkdown
                     remarkPlugins={remarkPlugins}
                     rehypePlugins={rehypePlugins}
-                    components={{
-                      a: markdownComponents.a,
-                      code({ className, children }) {
-                        const match = /language-(\w+)/.exec(className || "");
-                        // code block
-                        if (match) {
-                          return (
-                            <div className="relative mt-4 mb-4 rounded-md overflow-hidden border border-border">
-                              <div className="flex items-center justify-between px-4 py-1.5 bg-muted/50 text-xs text-muted-foreground border-b border-border">
-                                <span>{match[1]}</span>
-                              </div>
-                              <SyntaxHighlighter
-                                style={atelierSeasideLight}
-                                language={match[1]}
-                                PreTag="div"
-                                customStyle={{
-                                  margin: 0,
-                                  padding: "1rem",
-                                  background: "transparent",
-                                }}
-                                className="text-[13px]"
-                              >
-                                {String(children).replace(/\n$/, "")}
-                              </SyntaxHighlighter>
-                            </div>
-                          );
-                        }
-                        // code line
-                        return (
-                          <code
-                            className={cn(
-                              "bg-muted/60 text-foreground px-1.5 py-0.5 rounded-md font-mono text-[0.85em] border border-border/50",
-                              className,
-                            )}
-                          >
-                            {children}
-                          </code>
-                        );
-                      },
-                    }}
+                    components={responseComponents}
                   >
                     {normalizeLatexDelimiters(displayContent)}
                   </ReactMarkdown>
@@ -230,15 +210,37 @@ export function MessageBubble({
             </div>
           )}
 
-          {/* Timestamp */}
-          <span
+          {/* Actions + timestamp */}
+          <div
             className={cn(
-              "pointer-events-none absolute -bottom-5 whitespace-nowrap text-[11px] text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100",
+              "absolute -bottom-8 flex items-center gap-1",
+              "opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100",
               isUser ? "right-0" : "left-0",
             )}
           >
-            {formatTime(createdAt)}
-          </span>
+            {canCopy && (
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-sm"
+                      aria-label={sharedContent.copy}
+                      onClick={handleCopy}
+                      className="text-muted-foreground"
+                    >
+                      <Copy strokeWidth={1.75} />
+                    </Button>
+                  }
+                />
+                <TooltipContent>{sharedContent.copy}</TooltipContent>
+              </Tooltip>
+            )}
+            <span className="pointer-events-none whitespace-nowrap text-[11px] text-muted-foreground">
+              {formatTime(createdAt)}
+            </span>
+          </div>
         </div>
       </div>
     </div>
