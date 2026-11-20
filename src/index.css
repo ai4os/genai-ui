@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Geist:wght@100..900&family=Geist+Mono:wght@100..900&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Geist:wght@100..900&family=Geist+Mono:wght@100..900&display=swap");
 
 @import "tailwindcss";
 @import "tw-animate-css";
@@ -223,6 +223,31 @@
   --app-from: #e6edf6;
   --app-to: #f4f7fb;
 
+  /* Toast - Success */
+  --toast-success-bg: 240 250 244;
+  --toast-success-border: 184 228 200;
+  --toast-success-icon: 22 131 74;
+
+  /* Toast - Info */
+  --toast-info-bg: 239 246 255;
+  --toast-info-border: 191 219 254;
+  --toast-info-icon: 37 99 235;
+
+  /* Toast - Warning */
+  --toast-warning-bg: 255 251 235;
+  --toast-warning-border: 245 213 138;
+  --toast-warning-icon: 183 121 31;
+
+  /* Toast - Error */
+  --toast-error-bg: 255 241 240;
+  --toast-error-border: 241 184 179;
+  --toast-error-icon: 196 49 37;
+
+  /* Toast - Loading */
+  --toast-loading-bg: 244 246 250;
+  --toast-loading-border: 213 221 232;
+  --toast-loading-icon: 30 76 148;
+
   --transition-fast: 0.25s ease;
   --transition-base: 0.4s ease;
   --transition-slow: 0.65s cubic-bezier(0.4, 0, 0.2, 1);
@@ -271,6 +296,31 @@
   --error: #e57468;
   --error-surface: #3a2220;
   --error-border: #5c2e29;
+
+  /* Toast - Success */
+  --toast-success-bg: 25 55 39;
+  --toast-success-border: 48 100 67;
+  --toast-success-icon: 74 222 128;
+
+  /* Toast - Info */
+  --toast-info-bg: 25 45 75;
+  --toast-info-border: 45 78 125;
+  --toast-info-icon: 96 165 250;
+
+  /* Toast - Warning */
+  --toast-warning-bg: 65 49 20;
+  --toast-warning-border: 115 85 35;
+  --toast-warning-icon: 251 191 36;
+
+  /* Toast - Error */
+  --toast-error-bg: 65 32 30;
+  --toast-error-border: 120 55 48;
+  --toast-error-icon: 248 113 113;
+
+  /* Toast - Loading */
+  --toast-loading-bg: 38 45 58;
+  --toast-loading-border: 65 78 98;
+  --toast-loading-icon: 96 165 250;
 }
 
 @layer base {
@@ -300,5 +350,106 @@
 }
 
 .bg-sidebar-gradient {
-  background: linear-gradient(160deg, var(--brand-start) 0%, var(--brand-mid) 100%);
+  background: linear-gradient(
+    160deg,
+    var(--brand-start) 0%,
+    var(--brand-mid) 100%
+  );
+}
+
+/* ==========================================
+   SONNER - CUSTOM TOASTS
+========================================== */
+
+.cn-toast {
+  border: 1px solid var(--border) !important;
+  border-radius: 14px !important;
+  background: var(--popover) !important;
+  color: var(--foreground) !important;
+
+  box-shadow:
+    0 4px 8px rgba(23, 32, 51, 0.04),
+    0 12px 28px rgba(23, 32, 51, 0.12),
+    0 2px 4px rgba(23, 32, 51, 0.04) !important;
+
+  padding: 15px 16px !important;
+  min-height: 64px !important;
+
+  transition: all 0.2s ease !important;
+}
+
+.cn-toast-title {
+  font-size: 14px !important;
+  font-weight: 650 !important;
+  letter-spacing: -0.01em;
+  color: var(--foreground) !important;
+}
+
+.cn-toast-description {
+  font-size: 13px !important;
+  color: var(--muted-foreground) !important;
+  line-height: 1.5 !important;
+}
+
+/* SUCCESS */
+.cn-toast[data-type="success"] {
+  background: rgb(var(--toast-success-bg)) !important;
+  border-color: rgb(var(--toast-success-border)) !important;
+}
+
+.cn-toast[data-type="success"] [data-icon] {
+  color: rgb(var(--toast-success-icon)) !important;
+}
+
+/* INFO */
+.cn-toast[data-type="info"] {
+  background: rgb(var(--toast-info-bg)) !important;
+  border-color: rgb(var(--toast-info-border)) !important;
+}
+
+.cn-toast[data-type="info"] [data-icon] {
+  color: rgb(var(--toast-info-icon)) !important;
+}
+
+/* WARNING */
+.cn-toast[data-type="warning"] {
+  background: rgb(var(--toast-warning-bg)) !important;
+  border-color: rgb(var(--toast-warning-border)) !important;
+}
+
+.cn-toast[data-type="warning"] [data-icon] {
+  color: rgb(var(--toast-warning-icon)) !important;
+}
+
+/* ERROR */
+.cn-toast[data-type="error"] {
+  background: rgb(var(--toast-error-bg)) !important;
+  border-color: rgb(var(--toast-error-border)) !important;
+}
+
+.cn-toast[data-type="error"] [data-icon] {
+  color: rgb(var(--toast-error-icon)) !important;
+}
+
+/* LOADING */
+.cn-toast[data-type="loading"] {
+  background: rgb(var(--toast-loading-bg)) !important;
+  border-color: rgb(var(--toast-loading-border)) !important;
+}
+
+.cn-toast[data-type="loading"] [data-icon] {
+  color: rgb(var(--toast-loading-icon)) !important;
+}
+
+/* ACTION BUTTON */
+.cn-toast-action {
+  background: var(--primary-600) !important;
+  color: white !important;
+  border-radius: 8px !important;
+  font-weight: 600 !important;
+}
+
+.cn-toast-cancel {
+  background: transparent !important;
+  color: var(--muted-foreground) !important;
 }
