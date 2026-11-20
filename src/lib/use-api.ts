@@ -4,15 +4,31 @@ import { ApiError, apiFetch } from "@/lib/api"
 
 export function useGetToken() {
   const auth = useAuth()
-  const user = auth.user
+
   return useCallback(async () => {
-    if (!user || user.expired) throw new ApiError(401, "Sesión caducada")
+    let user = auth.user
+
+    if (!user || user.expired) {
+      try {
+        user = await auth.signinSilent()
+      } catch {
+        await auth.signoutRedirect()
+        throw new ApiError(401, "Expired session")
+      }
+    }
+
+    if (!user || user.expired) {
+      await auth.signoutRedirect()
+      throw new ApiError(401, "Expired session")
+    }
+
     return user.access_token
-  }, [user])
+  }, [auth.user, auth.signinSilent, auth.signoutRedirect])
 }
 
 export function useApi() {
   const getToken = useGetToken()
+
   return useCallback(
     async <T>(path: string, init?: RequestInit) =>
       apiFetch<T>(path, await getToken(), init),

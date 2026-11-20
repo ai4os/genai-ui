@@ -7,9 +7,12 @@ export const chatsContent = {
     yesterday: "Yesterday",
     lastWeek: "Last 7 days",
     previous: "Previous",
+    clear: "Clear"
   },
   chat: {
     send: "Send",
+    stop: "Stop",
+    attach: "Attach file",
     model: "Model",
     agent: "Agent",
     general: "General",
@@ -39,10 +42,6 @@ export const chatsContent = {
       title: "Delete conversation",
       description:
         "The conversation will be deleted along with the attached documents. This action cannot be undone.",
-    },
-    toasts: {
-      deleteSuccess: "The chat has been deleted successfully",
-      deleteError: "The chat could not be deleted",
     },
   },
   selector: {

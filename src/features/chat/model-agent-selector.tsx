@@ -196,30 +196,36 @@ export function ModelAgentSelector({
   const detailMeta = detailItem ? parseModel(detailItem.id) : null;
 
   return (
-    <div className="flex items-center justify-between w-full gap-3 pl-3">
+    <div className="flex w-full flex-wrap items-center justify-between gap-3">
       {/* Toggle model | agent */}
-      <div className="flex items-center gap-1 rounded-full bg-muted p-1">
+      <div
+        role="group"
+        aria-label={`${chatsContent.chat.model} / ${chatsContent.chat.agent}`}
+        className="inline-flex gap-0.5 rounded-full bg-muted p-1"
+      >
         <button
           type="button"
+          aria-pressed={mode === "model"}
           onClick={() => onModeChange("model")}
           className={cn(
-            "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium cursor-pointer",
+            "inline-flex h-9 cursor-pointer items-center gap-2 rounded-full px-4 text-sm font-medium text-muted-foreground outline-none transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
             mode === "model" && "bg-primary text-primary-foreground",
           )}
         >
-          <Cpu className="size-4" />
+          <Cpu className="size-4" strokeWidth={1.75} />
           {chatsContent.chat.model}
         </button>
 
         <button
           type="button"
+          aria-pressed={mode === "agent"}
           onClick={() => onModeChange("agent")}
           className={cn(
-            "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium cursor-pointer",
+            "inline-flex h-9 cursor-pointer items-center gap-2 rounded-full px-4 text-sm font-medium text-muted-foreground outline-none transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
             mode === "agent" && "bg-primary text-primary-foreground",
           )}
         >
-          <Bot className="size-3.5" />
+          <Bot className="size-4" strokeWidth={1.75} />
           {chatsContent.chat.agent}
         </button>
       </div>
@@ -230,11 +236,13 @@ export function ModelAgentSelector({
           ref={triggerRef}
           type="button"
           disabled={disabled}
+          aria-haspopup="listbox"
+          aria-expanded={open}
           onClick={() => {
             setOpen((o) => !o);
             setHoveredId(null);
           }}
-          className="flex max-w-full min-w-0 items-center gap-2 rounded-md border bg-background px-3 py-2 text-sm hover:border-primary-400 disabled:opacity-50 transition-colors cursor-pointer sm:min-w-[260px]"
+          className="flex h-11 max-w-full min-w-0 cursor-pointer items-center gap-2.5 rounded-full border border-control bg-background px-4 text-sm font-medium text-foreground outline-none transition-colors hover:bg-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:border-transparent disabled:bg-disabled disabled:text-disabled-foreground sm:min-w-[300px]"
         >
           {mode === "model" ? (
             <>
@@ -242,41 +250,47 @@ export function ModelAgentSelector({
                 <img
                   src={selectedModelIcon.src}
                   alt={selectedModelIcon.alt}
-                  width={16}
-                  height={16}
+                  width={18}
+                  height={18}
                 />
               ) : (
-                <FallbackModelIcon className="size-4 text-primary-700" />
+                <FallbackModelIcon className="size-[18px] text-primary" />
               )}
 
               <span className="flex-1 truncate text-left">
-                <span className="block truncate font-medium">
-                  {selectedModelMeta?.name}
-                </span>
-                <span className="block text-xs text-muted-foreground">
-                  {selectedModelMeta?.provider}
-                </span>
+                {selectedModelMeta?.name}
               </span>
+              {selectedModelMeta?.provider && (
+                <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                  {selectedModelMeta.provider}
+                </span>
+              )}
             </>
           ) : (
             <>
-              <Bot className="size-4" />
+              <Bot className="size-[18px]" strokeWidth={1.75} />
 
-              <span className="flex-1 truncate">{selectedAgent?.name}</span>
+              <span className="flex-1 truncate text-left">
+                {selectedAgent?.name}
+              </span>
+              <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                {chatsContent.chat.agent}
+              </span>
             </>
           )}
           <ChevronDown
             className={cn(
-              "size-3.5 text-muted-foreground transition-transform",
+              "size-4 shrink-0 text-muted-foreground transition-transform",
               open && "rotate-180",
             )}
+            strokeWidth={1.75}
           />
         </button>
 
         {open && (
           <div
             style={popoverStyle}
-            className="fixed z-50 flex flex-col overflow-y-auto rounded-md border bg-popover p-2 shadow-2 sm:flex-row sm:overflow-hidden"
+            className="fixed z-50 flex flex-col overflow-y-auto rounded-lg border border-border bg-popover p-2 shadow-menu sm:flex-row sm:overflow-hidden"
           >
             {/* Left column: models list */}
             <div className="max-h-52 overflow-y-auto border-b border-border p-2 sm:max-h-none sm:w-1/2 sm:border-r sm:border-b-0">
@@ -284,7 +298,7 @@ export function ModelAgentSelector({
                 <>
                   {Object.entries(groups).map(([provider, items]) => (
                     <div key={provider} className="mb-2">
-                      <p className="px-2 pt-2 pb-1 text-[10.5px] font-medium uppercase tracking-wider text-muted-foreground">
+                      <p className="px-2 pt-2 pb-1 text-xs font-semibold uppercase tracking-[0.06em] text-muted-foreground">
                         {provider}
                       </p>
                       {items.map((m) => {
@@ -308,8 +322,8 @@ export function ModelAgentSelector({
                               setOpen(false);
                             }}
                             className={cn(
-                              "flex w-full items-center gap-2.5 rounded-lg px-2 py-2 text-left text-[13px] transition-colors cursor-pointer",
-                              !isUnhealthy && "hover:bg-slate-50",
+                              "flex w-full items-center gap-2.5 rounded-[10px] px-2 py-2 text-left text-sm transition-colors cursor-pointer",
+                              !isUnhealthy && "hover:bg-soft",
                               isSelected && !isUnhealthy && "bg-primary-50",
                               isUnhealthy &&
                                 "cursor-not-allowed opacity-50 grayscale",
@@ -357,12 +371,12 @@ export function ModelAgentSelector({
                           setOpen(false);
                         }}
                         className={cn(
-                          "flex w-full items-center gap-2.5 rounded-lg px-2 py-2 text-left text-[13px] transition-colors cursor-pointer",
+                          "flex w-full items-center gap-2.5 rounded-[10px] px-2 py-2 text-left text-sm transition-colors cursor-pointer hover:bg-soft",
 
-                          isSelected && "bg-primary-50",
+                          isSelected && "bg-primary-50 hover:bg-primary-50",
                         )}
                       >
-                        <div className="flex size-5 shrink-0 items-center justify-center rounded bg-slate-100">
+                        <div className="flex size-5 shrink-0 items-center justify-center rounded bg-muted">
                           <Bot className="size-3.5 text-primary-700" />
                         </div>
 
@@ -385,7 +399,7 @@ export function ModelAgentSelector({
             </div>
 
             {/* Right column: Details */}
-            <div className="flex flex-col bg-white p-5 sm:w-1/2 sm:overflow-y-auto">
+            <div className="flex flex-col rounded-[10px] bg-popover p-5 sm:w-1/2 sm:overflow-y-auto">
               {detailItem ? (
                 <>
                   <h4 className="text-sm font-semibold text-foreground mb-0.5">
@@ -393,7 +407,7 @@ export function ModelAgentSelector({
                       ? detailMeta?.name
                       : (detailItem as AgentInfo).name}
                   </h4>
-                  <p className="text-[11.5px] text-muted-foreground mb-3 uppercase">
+                  <p className="text-xs text-muted-foreground mb-3 uppercase">
                     {/* TODO: cambiar chatsContent.chat.agent cuando estén los providers  */}
                     {mode === "model"
                       ? detailMeta?.provider
@@ -409,7 +423,7 @@ export function ModelAgentSelector({
                         ).map((c) => (
                           <span
                             key={c.key}
-                            className="inline-flex items-center gap-1 text-[10.5px] px-2 py-0.5 rounded-full bg-primary-50 text-primary-700 font-medium"
+                            className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-primary-50 text-primary-700 font-medium"
                           >
                             <c.icon className="size-3" />
                             {chatsContent.selector.capabilities[c.key]}
@@ -418,7 +432,7 @@ export function ModelAgentSelector({
                         {MODEL_CAPABILITIES.every(
                           (c) => !(detailItem as ModelInfo)[c.key],
                         ) && (
-                          <span className="text-[10.5px] px-2 py-0.5 rounded-full bg-slate-100 text-muted-foreground font-medium">
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground font-medium">
                             {chatsContent.selector.textOnly}
                           </span>
                         )}
@@ -475,19 +489,19 @@ export function ModelAgentSelector({
                           (detailItem as AgentInfo).skills!.map((skill) => (
                             <span
                               key={skill.name}
-                              className="text-[10.5px] px-2 py-0.5 rounded-full bg-primary-50 text-primary-700 font-medium"
+                              className="text-xs px-2 py-0.5 rounded-full bg-primary-50 text-primary-700 font-medium"
                             >
                               {skill.name}
                             </span>
                           ))
                         ) : (
-                          <span className="text-[10.5px] px-2 py-0.5 rounded-full bg-primary-50 text-primary-700 font-medium">
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-primary-50 text-primary-700 font-medium">
                             {chatsContent.chat.agent}
                           </span>
                         )}
                       </div>
 
-                      <p className="text-[12.5px] text-muted-foreground leading-relaxed mb-4">
+                      <p className="text-[13px] text-muted-foreground leading-relaxed mb-4">
                         {(detailItem as AgentInfo).description ||
                           chatsContent.selector.noDesc}
                       </p>

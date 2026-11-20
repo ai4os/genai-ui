@@ -13,7 +13,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { toolsContent } from "@/content/tools";
 import { Loader2 } from "lucide-react";
-import { toast } from "sonner";
 import { sharedContent } from "@/content/shared";
 
 export interface CreateCollectionData {
@@ -60,10 +59,7 @@ export function CreateCollectionDialog({
         name: trimmedName,
         description: description.trim() || undefined,
       });
-      toast.success(toolsContent.milvus.toasts.createCollectionSuccess);
       handleOpenChange(false);
-    } catch {
-      toast.error(toolsContent.milvus.toasts.createCollectionError);
     } finally {
       setIsSubmitting(false);
     }
@@ -71,7 +67,7 @@ export function CreateCollectionDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent>
         <form onSubmit={handleSubmit}>
           <DialogHeader>
             <DialogTitle>{toolsContent.milvus.collections.create}</DialogTitle>
@@ -82,7 +78,9 @@ export function CreateCollectionDialog({
 
           <div className="mt-4 space-y-4">
             <div className="space-y-1.5">
-              <Label htmlFor="collection-name">{toolsContent.milvus.name}</Label>
+              <Label htmlFor="collection-name">
+                {toolsContent.milvus.name}
+              </Label>
               <Input
                 id="collection-name"
                 autoFocus
@@ -112,6 +110,7 @@ export function CreateCollectionDialog({
                 rows={3}
                 disabled={isSubmitting}
                 maxLength={256}
+                className="w-full min-w-0 [overflow-wrap:anywhere]"
               />
             </div>
 
@@ -121,7 +120,7 @@ export function CreateCollectionDialog({
           <DialogFooter className="mt-6">
             <Button
               type="button"
-              variant="outline"
+              variant="secondary"
               onClick={() => handleOpenChange(false)}
               disabled={isSubmitting}
             >
@@ -130,7 +129,7 @@ export function CreateCollectionDialog({
             <Button type="submit" disabled={isSubmitting || !name.trim()}>
               {isSubmitting ? (
                 <>
-                  <Loader2 className="size-3.5 animate-spin" />
+                  <Loader2 className="size-4 animate-spin" />
                   {toolsContent.creating}
                 </>
               ) : (

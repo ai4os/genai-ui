@@ -6,12 +6,9 @@ import {
   useState,
 } from "react";
 import { v4 as uuidv4 } from "uuid";
-import { toast } from "sonner";
 
-import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { chatsContent } from "@/content/chats";
-import { toolsContent } from "@/content/tools";
 import { MAX_ATTACHMENTS_BYTES } from "@/lib/constants";
 import type {
   AgentInfo,
@@ -25,7 +22,6 @@ import type {
 } from "@/lib/types";
 import { useApi } from "@/lib/use-api";
 
-import { uploadChatFiles } from "./api/chat-files";
 import { ChatComposer } from "./composer/chat-composer";
 import { useChatAttachments } from "./composer/use-chat-attachments";
 import { ChatErrorBanner } from "./messages/chat-error-banner";
@@ -37,6 +33,7 @@ import {
   useChatStream,
 } from "./sending/use-chat-stream";
 import { useKnowledgeSelection } from "../knowledge/use-knowledge-selection";
+import { useUploadChatFiles } from "./api/queries";
 
 function tempId() {
   return `temp-${uuidv4()}`;
@@ -81,6 +78,7 @@ export function ChatView({
   agents: AgentInfo[];
 }>) {
   const api = useApi();
+  const uploadChatFiles = useUploadChatFiles();
   const { selectedIds, setMilvusDisabled } = useKnowledgeSelection();
 
   // --- Messages and model/agent selection ---
@@ -90,10 +88,12 @@ export function ChatView({
     (m) => m.role === "assistant",
   );
   const [model, setModel] = useState(
-    lastAssistantMsg?.model_id ?? models[0]?.id,
+    models.find((m) => m.id === lastAssistantMsg?.model_id)?.id ??
+      models.find((m) => m.id === "AI4EOSC/default")?.id ??
+      models[0]?.id,
   );
   const [agent, setAgent] = useState(
-    lastAssistantMsg?.agent_id ?? agents[0]?.id,
+    lastAssistantMsg?.agent_id ?? agents.find((a) => a.name === "default")?.id ?? agents[0]?.id,
   );
   const [mode, setMode] = useState<Mode>(
     lastAssistantMsg?.agent_id ? "agent" : "model",
@@ -168,14 +168,12 @@ export function ChatView({
       if (filesToUpload.length) {
         setUploading(true);
         try {
-          uploaded = await uploadChatFiles(api, chatId, filesToUpload);
-        } catch (err) {
+          uploaded = await uploadChatFiles.mutateAsync({
+            chatId,
+            files: filesToUpload,
+          });
+        } catch {
           setMessages((prev) => prev.filter((m) => m.id !== userMsgId));
-          toast.error(
-            err instanceof Error
-              ? err.message
-              : toolsContent.milvus.toasts.uploadError,
-          );
           return false;
         } finally {
           setUploading(false);
@@ -274,11 +272,8 @@ export function ChatView({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="flex items-center justify-between gap-2 border-b px-4 py-3 md:px-8">
-        <div className="flex items-center gap-2 pr-[0.5em]">
-          <SidebarTrigger />
-          <Separator orientation="vertical" className="h-4" />
-        </div>
+      <header className="flex min-h-[72px] items-center gap-3 border-b border-border px-6 py-3">
+        <SidebarTrigger />
         <ModelAgentSelector
           models={models}
           agents={agents}
@@ -290,7 +285,7 @@ export function ChatView({
           onModeChange={setMode}
           disabled={sending || !!error}
         />
-      </div>
+      </header>
 
       <div
         ref={scrollRef}

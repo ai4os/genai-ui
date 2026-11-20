@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Loader2, Search, Trash2 } from "lucide-react";
+import { Loader2, Plus, Search, Trash2, X } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -14,8 +14,11 @@ import { Button, buttonVariants } from "../../components/ui/button";
 import { chatsContent } from "@/content/chats";
 import { cn } from "@/lib/utils";
 import { sharedContent } from "@/content/shared";
-import { Tooltip, TooltipContent, TooltipTrigger } from "../../components/ui/tooltip";
-import { toast } from "sonner";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "../../components/ui/tooltip";
 import {
   Dialog,
   DialogContent,
@@ -115,43 +118,64 @@ export function ChatSidebar({ chats, userMenu }: Readonly<AppSidebarProps>) {
       if (pathname === `/chat/${chatId}`) navigate("/chat", { replace: true });
 
       await deleteChat.mutateAsync(chatId);
-      toast.success(chatsContent.chat.toasts.deleteSuccess);
       setChatToDelete(null);
     } catch {
-      toast.error(chatsContent.chat.toasts.deleteError);
+      // The mutation query owns the error toast.
     } finally {
       setIsDeleting(false);
     }
   };
 
   return (
-    <Sidebar className="border-none bg-[linear-gradient(160deg,var(--brand-start)_0%,var(--brand-mid)_100%)] text-white">
-      <SidebarHeader className="gap-3 p-4">
+    <Sidebar className="border-none bg-sidebar-gradient text-white">
+      <SidebarHeader className="gap-3 px-4 pt-5 pb-2">
         <Link
           to="/chat"
           className={cn(
-            buttonVariants({ variant: "brandGhost", size: "pill" }),
-            "justify-center",
+            buttonVariants({ variant: "inverse", size: "lg" }),
+            "w-full",
           )}
         >
-          + {chatsContent.sidebar.newBtn}
+          <Plus className="size-[18px]" strokeWidth={2} />
+          {chatsContent.sidebar.newBtn}
         </Link>
 
-        <div className="flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-3 py-2">
-          <Search className="size-4 shrink-0 text-white/70" />
+        <label className="flex h-10 items-center gap-2.5 rounded-full bg-white/14 px-3.5 text-white focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-white">
+          <Search className="size-[18px] shrink-0" strokeWidth={1.75} />
+
           <input
+            type="search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder={chatsContent.sidebar.searchPlaceholder}
-            className="w-full bg-transparent text-sm text-white outline-none placeholder:text-white/55"
+            aria-label={chatsContent.sidebar.searchPlaceholder}
+            className="min-w-0 flex-1 bg-transparent text-sm text-white outline-none placeholder:text-white/85 [&::-webkit-search-cancel-button]:hidden"
           />
-        </div>
+
+          {query && (
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <button
+                    type="button"
+                    onClick={() => setQuery("")}
+                    aria-label="Limpiar búsqueda"
+                    className="shrink-0 text-white/60 transition-colors hover:text-white focus-visible:outline-2 focus-visible:outline-white"
+                  >
+                    <X className="size-4" strokeWidth={2} />
+                  </button>
+                }
+              />
+              <TooltipContent>{chatsContent.sidebar.clear}</TooltipContent>
+            </Tooltip>
+          )}
+        </label>
       </SidebarHeader>
 
-      <SidebarContent className="px-2">
+      <SidebarContent className="px-2 pb-2">
         {grouped.map(({ label, chats: groupItems }) => (
-          <div key={label} className="mb-1">
-            <p className="px-3 pt-3 pb-1 text-[11px] font-medium tracking-wide text-white/55 uppercase">
+          <div key={label}>
+            <p className="mx-3 mt-[18px] mb-1.5 text-xs font-semibold tracking-[0.06em] text-white/85 uppercase">
               {label}
             </p>
             <SidebarMenu>
@@ -160,7 +184,7 @@ export function ChatSidebar({ chats, userMenu }: Readonly<AppSidebarProps>) {
                   <SidebarMenuButton
                     render={<Link to={`/chat/${chat.id}`} />}
                     isActive={pathname === `/chat/${chat.id}`}
-                    className="text-white/85 hover:bg-white/10 hover:text-white data-active:bg-white/20 data-active:text-white group-hover/menu-item:pr-9 group-focus-within/menu-item:pr-9"
+                    className="h-[38px] rounded-[10px] px-3 font-normal text-white outline-none hover:bg-white/12 hover:text-white focus-visible:ring-2 focus-visible:ring-white data-active:bg-white/20 data-active:font-normal data-active:text-white group-hover/menu-item:pr-9 group-focus-within/menu-item:pr-9"
                   >
                     <span className="block min-w-0 flex-1 truncate">
                       <Highlighted
@@ -176,12 +200,12 @@ export function ChatSidebar({ chats, userMenu }: Readonly<AppSidebarProps>) {
                         <Button
                           type="button"
                           variant="ghost"
-                          size="icon"
+                          size="icon-sm"
                           aria-label={sharedContent.delete}
-                          className="absolute inset-y-0 right-1 my-auto size-7 cursor-pointer text-white/60 opacity-0 transition-[opacity,color] hover:bg-transparent hover:text-white dark:hover:bg-transparent focus-visible:opacity-100 group-hover/menu-item:opacity-100 group-focus-within/menu-item:opacity-100 [@media(hover:none)]:opacity-100"
+                          className="absolute inset-y-0 right-1 my-auto text-white opacity-0 transition-opacity hover:bg-white/12 focus-visible:opacity-100 focus-visible:outline-white group-hover/menu-item:opacity-100 group-focus-within/menu-item:opacity-100 [@media(hover:none)]:opacity-100"
                           onClick={() => setChatToDelete(chat)}
                         >
-                          <Trash2 className="size-3.5" />
+                          <Trash2 className="size-4" strokeWidth={1.75} />
                         </Button>
                       }
                     />
@@ -193,7 +217,7 @@ export function ChatSidebar({ chats, userMenu }: Readonly<AppSidebarProps>) {
           </div>
         ))}
       </SidebarContent>
-      <SidebarFooter className="border-t border-white/20 p-4">
+      <SidebarFooter className="border-t border-white/22 px-4 py-3.5">
         {userMenu}
       </SidebarFooter>
 
@@ -203,7 +227,7 @@ export function ChatSidebar({ chats, userMenu }: Readonly<AppSidebarProps>) {
           if (!open && !isDeleting) setChatToDelete(null);
         }}
       >
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-[400px]">
           <DialogHeader>
             <DialogTitle>{chatsContent.chat.deleteDialog.title}</DialogTitle>
             <DialogDescription>
@@ -219,23 +243,21 @@ export function ChatSidebar({ chats, userMenu }: Readonly<AppSidebarProps>) {
           <DialogFooter>
             <Button
               type="button"
-              variant="outline"
+              variant="secondary"
               disabled={isDeleting}
               onClick={() => setChatToDelete(null)}
-              className="cursor-pointer"
             >
               {sharedContent.cancel}
             </Button>
             <Button
               type="button"
-              variant="destructive"
+              variant="destructiveSolid"
               disabled={isDeleting}
               onClick={handleConfirmDelete}
-              className="gap-1.5 cursor-pointer"
             >
               {isDeleting ? (
                 <>
-                  <Loader2 className="size-3.5 animate-spin" />
+                  <Loader2 className="size-4 animate-spin" />
                   {sharedContent.deleting}
                 </>
               ) : (

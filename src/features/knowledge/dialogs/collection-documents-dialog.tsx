@@ -4,6 +4,7 @@ import {
   ChevronRight,
   FileText,
   Loader2,
+  MoreHorizontal,
   Trash2,
   Upload,
 } from "lucide-react";
@@ -11,19 +12,31 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 import { toolsContent } from "@/content/tools";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { toast } from "sonner";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { sharedContent } from "@/content/shared";
 import type { Collection } from "@/lib/types";
 import { useApi } from "@/lib/use-api";
-import { addDocument, deleteDocument, listDocuments } from "@/features/knowledge/api/documents";
+import { listDocuments } from "@/features/knowledge/api/documents";
+import { feedbackContent } from "@/content/feedback";
+import { useAddDocument, useDeleteDocument } from "../api/queries";
 
 /** Documents shown per page. Keep <= the backend max (200). */
 const PAGE_SIZE = 25;
@@ -56,15 +69,19 @@ export function CollectionDocsDialog({
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
-  const [deletingFileName, setDeletingFileName] = useState<string | null>(null);
+
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
   const [isDeletingCollection, setIsDeletingCollection] = useState(false);
+  const [fileToDelete, setFileToDelete] = useState<string | null>(null);
+  const [isDeletingFile, setIsDeletingFile] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   // Client-side cache of already fetched pages, keyed by `${collectionId}:${page}`.
   // Lets us show a visited page instantly, with no loader and no server call.
   const pageCacheRef = useRef(new Map<string, CachedPage>());
   const collectionId = collection?.id ?? collection?.name ?? null;
+  const addDocument = useAddDocument();
+  const deleteDocument = useDeleteDocument();
   const isPrivate = collection?.scope !== "public";
   const description = collection?.description?.trim() || null;
 
@@ -120,7 +137,7 @@ export function CollectionDocsDialog({
         setTotal(result.total);
       })
       .catch(() => {
-        if (!cancelled) setError(toolsContent.milvus.toasts.loadFilesError);
+        if (!cancelled) setError(feedbackContent.toasts.loadFilesError);
       })
       .finally(() => {
         if (!cancelled) setIsLoading(false);
@@ -129,7 +146,7 @@ export function CollectionDocsDialog({
     return () => {
       cancelled = true;
     };
-  }, [collectionId, page, reloadKey, api])
+  }, [collectionId, page, reloadKey, api]);
 
   // Called after upload/delete. Documents are sorted, so any change can shift
   // every page: drop all cached pages of this collection and refetch.
@@ -150,11 +167,11 @@ export function CollectionDocsDialog({
 
     setIsUploading(true);
     try {
-      await addDocument(api, collectionId, selectedFile);
-      toast.success(toolsContent.milvus.toasts.uploadSuccess);
+      await addDocument.mutateAsync({
+        collectionId,
+        file: selectedFile,
+      });
       reloadCurrentPage();
-    } catch {
-      toast.error(toolsContent.milvus.toasts.uploadError);
     } finally {
       setIsUploading(false);
       if (fileInputRef.current) {
@@ -163,18 +180,20 @@ export function CollectionDocsDialog({
     }
   };
 
-  const handleDeleteDocument = async (filename: string) => {
-    if (!collectionId) return;
+  const handleDeleteDocument = async () => {
+    if (!collectionId || !fileToDelete) return;
 
-    setDeletingFileName(filename);
+    setIsDeletingFile(true);
+
     try {
-      await deleteDocument(api, collectionId, filename);
-      toast.success(toolsContent.milvus.toasts.deleteSuccess);
+      await deleteDocument.mutateAsync({
+        collectionId,
+        fileName: fileToDelete,
+      });
+      setFileToDelete(null);
       reloadCurrentPage();
-    } catch {
-      toast.error(toolsContent.milvus.toasts.deleteError);
     } finally {
-      setDeletingFileName(null);
+      setIsDeletingFile(false);
     }
   };
 
@@ -184,10 +203,7 @@ export function CollectionDocsDialog({
     setIsDeletingCollection(true);
     try {
       await onDeleteCollection(collectionId);
-      toast.success(toolsContent.milvus.toasts.deleteCollectionSuccess);
       onOpenChange(false);
-    } catch {
-      toast.error(toolsContent.milvus.toasts.deleteCollectionError);
     } finally {
       setIsDeletingCollection(false);
       setIsConfirmingDelete(false);
@@ -202,108 +218,78 @@ export function CollectionDocsDialog({
   const isBusy = isUploading || isDeletingCollection;
   const showSpinner = isLoading;
 
+  const collectionName = collection ? getCollectionId(collection) : "";
+
   return (
     <Dialog open={collection !== null} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-xl">
-        <DialogHeader>
-          <DialogTitle className="truncate">
-            {collection ? getCollectionId(collection) : ""}
-          </DialogTitle>
+        <DialogHeader className="gap-0 pr-10">
+          <DialogTitle className="truncate">{collectionName}</DialogTitle>
+
           {/* Visible only when the collection has a description */}
-          <DialogDescription className={cn(!description && "sr-only")}>
+          <DialogDescription
+            className={cn("mt-2 leading-normal", !description && "sr-only")}
+          >
             {description ?? countLabel}
           </DialogDescription>
-
-          {isPrivate && (
-            <div className="flex flex-wrap items-center justify-end gap-2 pt-1">
-              <input
-                type="file"
-                ref={fileInputRef}
-                className="hidden"
-                onChange={handleFileChange}
-              />
-
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                disabled={isBusy || isConfirmingDelete}
-                onClick={() => fileInputRef.current?.click()}
-                className="gap-1.5 text-xs cursor-pointer"
-              >
-                {isUploading ? (
-                  <>
-                    <Loader2 className="size-3.5 animate-spin" />
-                    {toolsContent.milvus.files.uploading}
-                  </>
-                ) : (
-                  <>
-                    <Upload className="size-3.5" />
-                    {toolsContent.milvus.files.upload}
-                  </>
-                )}
-              </Button>
-
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                disabled={isBusy || isConfirmingDelete}
-                onClick={() => setIsConfirmingDelete(true)}
-                className="gap-1.5 text-xs text-destructive hover:bg-destructive/10 hover:text-destructive cursor-pointer"
-              >
-                <Trash2 className="size-3.5" />
-                {toolsContent.milvus.collections.delete}
-              </Button>
-            </div>
-          )}
         </DialogHeader>
 
-        {isPrivate && isConfirmingDelete && (
-          <div
-            role="alert"
-            className="flex flex-row justify-between items-center gap-3 rounded-md border border-destructive/30 bg-destructive/10 p-3"
-          >
-            <p className="text-sm font-medium text-destructive">
-              {toolsContent.milvus.collections.delete} {'"'}
-              {collection ? getCollectionId(collection) : ""}&rdquo;?
-            </p>
+        {isPrivate && (
+          <div className="mt-3 mb-2 flex items-center justify-end gap-2">
+            <input
+              type="file"
+              ref={fileInputRef}
+              className="hidden"
+              onChange={handleFileChange}
+            />
 
-            <div className="flex justify-end gap-2">
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                disabled={isDeletingCollection}
-                onClick={() => setIsConfirmingDelete(false)}
-                className="text-xs cursor-pointer"
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              disabled={isBusy || isConfirmingDelete}
+              onClick={() => fileInputRef.current?.click()}
+            >
+              {isUploading ? (
+                <>
+                  <Loader2 className="animate-spin" />
+                  {toolsContent.milvus.files.uploading}
+                </>
+              ) : (
+                <>
+                  <Upload strokeWidth={1.75} />
+                  {toolsContent.milvus.files.upload}
+                </>
+              )}
+            </Button>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                disabled={isBusy || isConfirmingDelete}
+                aria-label={toolsContent.milvus.collections.options}
+                className={buttonVariants({
+                  variant: "ghost",
+                  size: "icon-sm",
+                })}
               >
-                {sharedContent.cancel}
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant="destructive"
-                disabled={isDeletingCollection}
-                onClick={handleDeleteCollection}
-                className="gap-1.5 bg-destructive text-xs text-white hover:bg-destructive/90 cursor-pointer"
-              >
-                {isDeletingCollection ? (
-                  <>
-                    <Loader2 className="size-3.5 animate-spin" />
-                    {sharedContent.deleting}
-                  </>
-                ) : (
-                  sharedContent.delete
-                )}
-              </Button>
-            </div>
+                <MoreHorizontal strokeWidth={1.75} />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-52">
+                <DropdownMenuItem
+                  variant="destructive"
+                  onClick={() => setIsConfirmingDelete(true)}
+                >
+                  <Trash2 strokeWidth={1.75} />
+                  {toolsContent.milvus.collections.delete}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         )}
 
         <div
           className={cn(
-            "mt-2 overflow-x-hidden overflow-y-auto rounded-md border",
+            "mt-2 overflow-x-hidden overflow-y-auto rounded-[14px] border border-border",
             totalPages > 1 ? "h-96" : "max-h-96",
           )}
         >
@@ -332,11 +318,15 @@ export function CollectionDocsDialog({
               <div
                 key={`${fileName}-${index}`}
                 className={cn(
-                  "flex items-center gap-2.5 px-3 py-2 text-sm",
+                  "flex h-12 items-center gap-3 py-0 pr-1.5 pl-3 text-sm",
                   index !== files.length - 1 && "border-b border-border",
                 )}
               >
-                <FileText className="size-3.5 shrink-0 text-muted-foreground" />
+                <FileText
+                  aria-hidden="true"
+                  className="size-[18px] shrink-0 text-muted-foreground"
+                  strokeWidth={1.75}
+                />
 
                 <FileName name={fileName} />
 
@@ -348,24 +338,16 @@ export function CollectionDocsDialog({
                         <Button
                           type="button"
                           variant="ghost"
-                          size="icon"
-                          className={cn(
-                            "shrink-0 cursor-pointer gap-1.5 text-xs text-muted-foreground hover:text-destructive",
-                            deletingFileName === fileName
-                              ? "h-7 w-auto px-2"
-                              : "size-7",
+                          size={"icon-sm"}
+                          aria-label={toolsContent.milvus.files.deleteConfirmTitle.replace(
+                            "{name}",
+                            fileName,
                           )}
-                          onClick={() => handleDeleteDocument(fileName)}
-                          disabled={deletingFileName === fileName}
+                          className="shrink-0 text-muted-foreground"
+                          onClick={() => setFileToDelete(fileName)}
+                          disabled={fileToDelete === fileName}
                         >
-                          {deletingFileName === fileName ? (
-                            <>
-                              <Loader2 className="size-3.5 animate-spin" />
-                              {sharedContent.deleting}
-                            </>
-                          ) : (
-                            <Trash2 className="size-3.5" />
-                          )}
+                          <Trash2 strokeWidth={1.75} />
                         </Button>
                       }
                     />
@@ -377,40 +359,137 @@ export function CollectionDocsDialog({
         </div>
 
         {(countLabel || totalPages > 1) && (
-          <div className="flex items-center justify-between gap-2">
-            <p className="text-xs text-muted-foreground">{countLabel}</p>
+          <div className="mt-1 flex items-center justify-between gap-2">
+            <p className="text-[13px] text-muted-foreground">{countLabel}</p>
 
             {totalPages > 1 && (
               <div className="flex items-center gap-1">
                 <Button
                   type="button"
                   variant="ghost"
-                  size="icon"
-                  className="size-7 cursor-pointer"
-                  aria-label="Previous page"
+                  size="icon-sm"
+                  aria-label={toolsContent.milvus.files.previousPage}
                   disabled={page <= 1 || isLoading}
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                 >
-                  <ChevronLeft className="size-4" />
+                  <ChevronLeft />
                 </Button>
-                <span className="min-w-14 text-center text-xs tabular-nums text-muted-foreground">
+                <span className="min-w-14 text-center text-[13px] tabular-nums text-muted-foreground">
                   {page} / {totalPages}
                 </span>
                 <Button
                   type="button"
                   variant="ghost"
-                  size="icon"
-                  className="size-7 cursor-pointer"
-                  aria-label="Next page"
+                  size="icon-sm"
+                  aria-label={toolsContent.milvus.files.nextPage}
                   disabled={page >= totalPages || isLoading}
                   onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                 >
-                  <ChevronRight className="size-4" />
+                  <ChevronRight />
                 </Button>
               </div>
             )}
           </div>
         )}
+
+        {/* Delete collection confirmation */}
+        <Dialog
+          open={isPrivate && isConfirmingDelete}
+          onOpenChange={(open) => {
+            if (!open && !isDeletingCollection) setIsConfirmingDelete(false);
+          }}
+        >
+          <DialogContent showCloseButton={false} className="sm:max-w-[400px]">
+            <DialogHeader>
+              <DialogTitle>
+                {toolsContent.milvus.collections.deleteConfirmTitle.replace(
+                  "{name}",
+                  collectionName,
+                )}
+              </DialogTitle>
+              <DialogDescription>
+                {toolsContent.milvus.collections.deleteConfirmDesc.replace(
+                  "{count}",
+                  String(total),
+                )}
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="mt-4">
+              <Button
+                type="button"
+                variant="secondary"
+                disabled={isDeletingCollection}
+                onClick={() => setIsConfirmingDelete(false)}
+              >
+                {sharedContent.cancel}
+              </Button>
+              <Button
+                type="button"
+                variant="destructiveSolid"
+                disabled={isDeletingCollection}
+                onClick={handleDeleteCollection}
+              >
+                {isDeletingCollection ? (
+                  <>
+                    <Loader2 className="animate-spin" />
+                    {sharedContent.deleting}
+                  </>
+                ) : (
+                  toolsContent.milvus.collections.delete
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Delete file confirmation */}
+        <Dialog
+          open={fileToDelete !== null}
+          onOpenChange={(open) => {
+            if (!open && !isDeletingFile) setFileToDelete(null);
+          }}
+        >
+          <DialogContent showCloseButton={false} className="sm:max-w-[400px]">
+            <DialogHeader>
+              <DialogTitle>
+                {toolsContent.milvus.files.deleteConfirmTitle.replace(
+                  "{name}",
+                  fileToDelete ?? "",
+                )}
+              </DialogTitle>
+              <DialogDescription>
+                {toolsContent.milvus.files.deleteConfirmDesc}
+              </DialogDescription>
+            </DialogHeader>
+
+            <DialogFooter className="mt-4">
+              <Button
+                type="button"
+                variant="secondary"
+                disabled={isDeletingFile}
+                onClick={() => setFileToDelete(null)}
+              >
+                {sharedContent.cancel}
+              </Button>
+
+              <Button
+                type="button"
+                variant="destructiveSolid"
+                disabled={isDeletingFile}
+                onClick={handleDeleteDocument}
+              >
+                {isDeletingFile ? (
+                  <>
+                    <Loader2 className="animate-spin" />
+                    {sharedContent.deleting}
+                  </>
+                ) : (
+                  sharedContent.delete
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </DialogContent>
     </Dialog>
   );

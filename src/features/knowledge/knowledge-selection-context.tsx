@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useCallback, useState, type ReactNode } from "react";
 import { KnowledgeSelectionContext } from "./use-knowledge-selection";
 
 export function KnowledgeSelectionProvider({
@@ -27,12 +27,17 @@ export function KnowledgeSelectionProvider({
     );
   }
 
+  const clearSelection = useCallback(() => {
+    setSelectedIds(new Set());
+  }, []);
+
   return (
     <KnowledgeSelectionContext.Provider
       value={{
         selectedIds,
         toggle,
         toggleAll,
+        clearSelection,
         milvusDisabled,
         setMilvusDisabled,
       }}
