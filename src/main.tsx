@@ -1,16 +1,20 @@
-import { StrictMode } from "react"
-import { createRoot } from "react-dom/client"
-import { AuthProvider } from "react-oidc-context"
-import { MutationCache, QueryClient, QueryClientProvider } from "@tanstack/react-query"
-import "katex/dist/katex.min.css"
-import "./index.css"
-import App from "./App.tsx"
+import { StrictMode } from "react";
+import { createRoot } from "react-dom/client";
+import { AuthProvider } from "react-oidc-context";
+import {
+  MutationCache,
+  QueryClient,
+  QueryClientProvider,
+} from "@tanstack/react-query";
+import "katex/dist/katex.min.css";
+import "./index.css";
+import App from "./App.tsx";
 
-import { WebStorageStateStore } from "oidc-client-ts"
-import { ApiError } from "./lib/api.ts"
-import { notify } from "./lib/notify.ts"
-import { Toaster } from "sonner"
-import type { User } from "oidc-client-ts"
+import { WebStorageStateStore } from "oidc-client-ts";
+import { ApiError } from "./lib/api.ts";
+import { notify } from "./lib/notify.ts";
+import type { User } from "oidc-client-ts";
+import { Toaster } from "./components/ui/sonner.tsx";
 
 const oidcConfig = {
   authority: import.meta.env.VITE_OIDC_AUTHORITY,
@@ -25,21 +29,23 @@ const oidcConfig = {
   automaticSilentRenew: true,
 
   onSigninCallback: (user: User | undefined) => {
-    const state = user?.state
+    const state = user?.state;
     const returnTo =
       typeof state === "object" && state !== null && "returnTo" in state
         ? state.returnTo
-        : "/chat"
+        : "/chat";
 
     const safeReturnTo =
-      typeof returnTo === "string" && returnTo.startsWith("/") && !returnTo.startsWith("//")
+      typeof returnTo === "string" &&
+      returnTo.startsWith("/") &&
+      !returnTo.startsWith("//")
         ? returnTo
-        : "/chat"
+        : "/chat";
 
-    window.history.replaceState({}, document.title, "/")
-    window.location.replace(safeReturnTo)
+    window.history.replaceState({}, document.title, "/");
+    window.location.replace(safeReturnTo);
   },
-}
+};
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -50,19 +56,19 @@ const queryClient = new QueryClient({
   },
   mutationCache: new MutationCache({
     onError: (error, _variables, _context, mutation) => {
-      if (mutation.meta?.silent) return
-      notify.error(error)
+      if (mutation.meta?.silent) return;
+      notify.error(error);
     },
   }),
-})
+});
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <AuthProvider {...oidcConfig}>
       <QueryClientProvider client={queryClient}>
         <App />
-         <Toaster />
+        <Toaster />
       </QueryClientProvider>
     </AuthProvider>
-  </StrictMode>
-)
+  </StrictMode>,
+);
