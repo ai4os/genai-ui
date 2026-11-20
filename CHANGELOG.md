@@ -1,5 +1,25 @@
 # Changelog
 
+## [1.1.0](https://github.com/ai4os/genai-ui/compare/v1.0.0...v1.1.0) (2026-11-20)
+
+
+### Features
+
+* add copy option to code block and chat messages ([52bbff2](https://github.com/ai4os/genai-ui/commit/52bbff2adfffe55eee47d7493892cb639984f4c7))
+* add delete confirmation dialog for files in collection ([272325b](https://github.com/ai4os/genai-ui/commit/272325bd71c45e87c690b3ecf64041cbec8964e4))
+* enhance knowledge selection and UI components ([85522a0](https://github.com/ai4os/genai-ui/commit/85522a0db9e976ce2c88cbbe0e28f41b9ee9eb59))
+* homogenise and improve styles ([c19fcc0](https://github.com/ai4os/genai-ui/commit/c19fcc00b64bfc4437c81ceae4093a2173d9de63))
+* integrate oidc-client-ts for authentication and enhance error handling ([5d9c9bd](https://github.com/ai4os/genai-ui/commit/5d9c9bdb7e66cacaa8eb982783190b58581402aa))
+
+
+### Bug Fixes
+
+* build ([faa6f44](https://github.com/ai4os/genai-ui/commit/faa6f44c8e459c0c5ed4f462f0b0fd63f4f8e35f))
+* lint ([c8cad25](https://github.com/ai4os/genai-ui/commit/c8cad2515621e58ad99c1d06752a866400dc8d74))
+* lint ([f75eb19](https://github.com/ai4os/genai-ui/commit/f75eb1974ec6d272b5b087807bc17ee59d4cbf71))
+* lint ([21fb634](https://github.com/ai4os/genai-ui/commit/21fb6343976aab4fddbacec57c5339477ec0aec3))
+* use default models and agents if not specified in chat view ([606d0ae](https://github.com/ai4os/genai-ui/commit/606d0ae09ceb1703037d6177382fd54eee5f1f60))
+
 ## 1.0.0 (2026-11-16)
 
 
