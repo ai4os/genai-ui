@@ -137,3 +137,11 @@ export type DeleteDocumentResponse = {
   collection_id: string;
   message: string;
 };
+
+
+/* User */
+export type UserInfo = {
+  name: string;
+  email: string;
+  uuid: string;
+};

@@ -27,6 +27,15 @@ export function KnowledgeSelectionProvider({
     );
   }
 
+  function removeSelectedId(id: string) {
+    setSelectedIds((prev) => {
+      if (!prev.has(id)) return prev;
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
+  }
+
   const clearSelection = useCallback(() => {
     setSelectedIds(new Set());
   }, []);
@@ -37,6 +46,7 @@ export function KnowledgeSelectionProvider({
         selectedIds,
         toggle,
         toggleAll,
+        removeSelectedId,
         clearSelection,
         milvusDisabled,
         setMilvusDisabled,

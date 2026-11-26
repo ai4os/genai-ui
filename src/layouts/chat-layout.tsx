@@ -6,6 +6,7 @@ import { UserMenu } from "@/features/auth/user-menu";
 import { KnowledgeSidebar } from "@/features/knowledge/knowledge-sidebar";
 import { useChats } from "@/features/chat/api/queries";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ChatProvider } from "@/features/chat/chat-provider";
 
 function ChatListSkeleton() {
   return (
@@ -21,23 +22,25 @@ export function ChatLayout() {
   const { data: chats, isPending } = useChats();
   return (
     <KnowledgeSelectionProvider>
-      <SidebarProvider
-        style={{ "--sidebar-width": "280px" } as React.CSSProperties}
-        className="h-svh gap-4 overflow-hidden bg-app-shell p-4 pl-0"
-      >
-        {isPending ? (
-          <ChatListSkeleton />
-        ) : (
-          <ChatSidebar chats={chats ?? []} userMenu={<UserMenu />} />
-        )}
-        <SidebarInset className="m-0! min-h-0 overflow-hidden rounded-shell bg-card shadow-shell">
-          {" "}
-          <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-            <Outlet />
-          </div>
-        </SidebarInset>
-        <KnowledgeSidebar />
-      </SidebarProvider>
+      <ChatProvider>
+        <SidebarProvider
+          style={{ "--sidebar-width": "280px" } as React.CSSProperties}
+          className="h-svh gap-4 overflow-hidden bg-app-shell p-4 pl-0"
+        >
+          {isPending ? (
+            <ChatListSkeleton />
+          ) : (
+            <ChatSidebar chats={chats ?? []} userMenu={<UserMenu />} />
+          )}
+          <SidebarInset className="m-0! min-h-0 overflow-hidden rounded-shell bg-card shadow-shell">
+            {" "}
+            <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+              <Outlet />
+            </div>
+          </SidebarInset>
+          <KnowledgeSidebar />
+        </SidebarProvider>
+      </ChatProvider>
     </KnowledgeSelectionProvider>
   );
 }
