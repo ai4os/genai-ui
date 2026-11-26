@@ -4,6 +4,7 @@ export type KnowledgeSelectionContextValue = {
   selectedIds: Set<string>;
   toggle: (id: string) => void;
   toggleAll: (ids: string[]) => void;
+  removeSelectedId: (id: string) => void;
   clearSelection: () => void;
   milvusDisabled: boolean;
   setMilvusDisabled: (disabled: boolean) => void;

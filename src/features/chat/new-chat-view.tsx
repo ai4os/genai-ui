@@ -11,6 +11,7 @@ import { setPendingMessage } from "@/features/chat/sending/pending-message";
 import { useCreateChat } from "./api/queries";
 import { MAX_ATTACHMENTS_BYTES } from "@/lib/constants";
 import { useKnowledgeSelection } from "../knowledge/use-knowledge-selection";
+import { useChatTarget } from "./chat-context";
 
 export function NewChatView({
   models,
@@ -25,6 +26,7 @@ export function NewChatView({
 }>) {
   const navigate = useNavigate();
   const createChat = useCreateChat();
+  const { target: preferredTarget, setTarget } = useChatTarget();
   const isPending = createChat.isPending;
 
   const [content, setContent] = useState("");
@@ -35,6 +37,21 @@ export function NewChatView({
   const requestedAgent = initialAgentId
     ? agents.find((a) => a.id === initialAgentId)
     : undefined;
+  const hasRequestedTarget = Boolean(initialModelId || initialAgentId);
+  const preferredModel =
+    !hasRequestedTarget &&
+    preferredTarget &&
+    "model_id" in preferredTarget
+      ? models.find(
+          (m) => m.id === preferredTarget.model_id && m.status === "healthy",
+        )
+      : undefined;
+  const preferredAgent =
+    !hasRequestedTarget &&
+    preferredTarget &&
+    "agent_id" in preferredTarget
+      ? agents.find((a) => a.id === preferredTarget.agent_id)
+      : undefined;
   const [error, setError] = useState<string | null>(() =>
     (initialModelId && !requestedModel) ||
     (initialAgentId && !requestedAgent)
@@ -42,17 +59,21 @@ export function NewChatView({
       : null,
   );
 
-  const [mode, setMode] = useState<Mode>(requestedAgent ? "agent" : "model");
+  const [mode, setMode] = useState<Mode>(
+    requestedAgent || preferredAgent ? "agent" : "model",
+  );
   const [model, setModel] = useState(
     requestedModel?.status === "healthy"
       ? requestedModel.id
-      : (models.find((m) => m.id === "AI4EOSC/default")?.id ??
+      : (preferredModel?.id ??
+          models.find((m) => m.id === "AI4EOSC/default")?.id ??
           models.find((m) => m.status === "healthy")?.id ??
           models[0]?.id),
   );
 
   const [agent, setAgent] = useState(
     requestedAgent?.id ??
+      preferredAgent?.id ??
       agents.find((a) => a.name === "default")?.id ??
       agents[0]?.id,
   );
@@ -72,6 +93,12 @@ export function NewChatView({
   const { setMilvusDisabled } = useKnowledgeSelection();
   const milvusUnsupported =
     selectedModel?.supports_function_calling !== true || mode === "agent";
+
+  useEffect(() => {
+    setTarget(
+      mode === "agent" ? { agent_id: agent } : { model_id: model },
+    );
+  }, [mode, model, agent, setTarget]);
 
   useEffect(() => {
     setMilvusDisabled(milvusUnsupported);
