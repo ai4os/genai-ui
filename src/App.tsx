@@ -4,6 +4,7 @@ import { ChatLayout } from "./layouts/chat-layout";
 import { ChatPage } from "./pages/chat-page";
 import { NewChatPage } from "./pages/new-chat-page";
 import { LandingPage } from "./pages/landing-page";
+import ProfilePage from "./pages/profile-page";
 
 export default function App() {
   return (
@@ -17,6 +18,7 @@ export default function App() {
           <Route element={<ChatLayout />}>
             <Route path="/chat" element={<NewChatPage />} />
             <Route path="/chat/:chatId" element={<ChatPage />} />
+            <Route path="/profile" element={<ProfilePage />} />
           </Route>
         </Route>
 

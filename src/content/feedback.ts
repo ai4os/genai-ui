@@ -40,6 +40,8 @@ export const feedbackContent = {
   toasts: {
     chatDeleted: "The chat has been deleted successfully",
     chatDeletedError: "The chat could not be deleted",
+    chatsDeleted: "All chats have been deleted successfully",
+    chatsDeletedError: "Chats could not be deleted",
     documentAdded: "The document has been added successfully",
     documentAddedError: "The document could not be added successfully",
     documentDeleted: "The document has been deleted successfully",
