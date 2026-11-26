@@ -1,7 +1,6 @@
 import { useEffect, useRef } from "react";
 
 interface UserBannerProps {
-  eyebrow?: string;
   fullName: string;
   email: string;
   userId: string;
@@ -47,7 +46,6 @@ function BannerDecorationLayer({
 }
 
 export function UserBanner({
-  eyebrow = "ACCOUNT",
   fullName,
   email,
   userId,
