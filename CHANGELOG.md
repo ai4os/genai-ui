@@ -1,5 +1,20 @@
 # Changelog
 
+## [1.2.0](https://github.com/ai4os/genai-ui/compare/v1.1.0...v1.2.0) (2026-11-26)
+
+
+### Features
+
+* add profile section with credit usage and danger zone sections ([d9a43b8](https://github.com/ai4os/genai-ui/commit/d9a43b8ca3adb3f791ab0e87dad9b42129ea3b1c))
+* open new chat window with the same model/agent that the user was using previously ([914e95f](https://github.com/ai4os/genai-ui/commit/914e95f4f673d02f5f8f4465a1a14d740a9d77e1))
+* remove private collection id from list when it is deleted ([8dfcdfc](https://github.com/ai4os/genai-ui/commit/8dfcdfc8ca5a146be8876fb978b31344b115f330))
+
+
+### Bug Fixes
+
+* build ([93fda4f](https://github.com/ai4os/genai-ui/commit/93fda4fb16bf801b852f7b61d77a4543a7ca872d))
+* lint ([e7502d5](https://github.com/ai4os/genai-ui/commit/e7502d54b621a9d86465f25ed69ce74379b2ad64))
+
 ## [1.1.0](https://github.com/ai4os/genai-ui/compare/v1.0.0...v1.1.0) (2026-11-20)
 
 
