@@ -34,6 +34,7 @@ import {
 } from "./sending/use-chat-stream";
 import { useKnowledgeSelection } from "../knowledge/use-knowledge-selection";
 import { useUploadChatFiles } from "./api/queries";
+import { useChatTarget } from "./chat-context";
 
 function tempId() {
   return `temp-${uuidv4()}`;
@@ -80,6 +81,7 @@ export function ChatView({
   const api = useApi();
   const uploadChatFiles = useUploadChatFiles();
   const { selectedIds, setMilvusDisabled } = useKnowledgeSelection();
+  const { setTarget } = useChatTarget();
 
   // --- Messages and model/agent selection ---
   const [messages, setMessages] = useState(initialMessages);
@@ -99,6 +101,12 @@ export function ChatView({
     lastAssistantMsg?.agent_id ? "agent" : "model",
   );
   const agentsById = new Map(agents.map((a) => [a.id, a.name]));
+
+  useEffect(() => {
+    setTarget(
+      mode === "agent" ? { agent_id: agent } : { model_id: model },
+    );
+  }, [mode, model, agent, setTarget]);
 
   // --- Attatchments ---
   const selectedModel =
