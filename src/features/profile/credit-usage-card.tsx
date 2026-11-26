@@ -61,14 +61,18 @@ export function CreditUsageCard() {
       {hasLimit && (
         <div
           role="progressbar"
-          aria-valuenow={usage_percentage}
+          aria-valuenow={
+            usage_percentage === null ? undefined : usage_percentage
+          }
           aria-valuemin={0}
           aria-valuemax={100}
           className="mt-4 h-2.5 w-full overflow-hidden rounded-full bg-muted"
         >
           <div
             className="h-full rounded-full bg-primary transition-all"
-            style={{ width: `${usage_percentage}%` }}
+            style={{
+              width: `${usage_percentage ?? 0}%`,
+            }}
           />
         </div>
       )}
