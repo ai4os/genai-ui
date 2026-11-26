@@ -116,8 +116,14 @@ export function CollectionList({
   const createCollection = useCreateCollection();
   const deleteCollection = useDeleteCollection();
 
-  const { selectedIds, toggle, toggleAll, milvusDisabled, clearSelection } =
-    useKnowledgeSelection();
+  const {
+    selectedIds,
+    toggle,
+    toggleAll,
+    removeSelectedId,
+    milvusDisabled,
+    clearSelection,
+  } = useKnowledgeSelection();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [filesCollection, setFilesCollection] = useState<Collection | null>(
     null,
@@ -235,6 +241,7 @@ export function CollectionList({
         }}
         onDeleteCollection={async (id) => {
           await deleteCollection.mutateAsync(id);
+          removeSelectedId(id);
         }}
       />
     </div>
